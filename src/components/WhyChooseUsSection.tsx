@@ -31,7 +31,7 @@ const WhyChooseUsSection = () => {
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Why Choose <span className="text-primary">HealthApp</span>?
+            Why Choose <span className="text-primary">Medify</span>?
           </h2>
           <p className="text-xl text-soft-gray max-w-2xl mx-auto">
             Experience healthcare built on trust, accessibility, and
@@ -40,11 +40,11 @@ const WhyChooseUsSection = () => {
         </div>
 
         {/* Benefits Grid */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-8 md:gap-0 max-w-6xl mx-auto">
           {benefits.map((benefit, index) => (
             <div
               key={index}
-              className="group text-center space-y-6 p-8 rounded-2xl hover:bg-calm-blue/50 transition-all duration-300 hover:shadow-soft"
+              className="group text-center space-y-6 p-8 rounded-2xl hover:bg-primary/5  transition-all duration-300 hover:shadow-soft"
             >
               {/* Icon */}
               <div className="mx-auto w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
@@ -57,12 +57,12 @@ const WhyChooseUsSection = () => {
                   {benefit.title}
                 </h3>
 
-                <p className="text-soft-gray leading-relaxed">
+                <p className="text-soft-gray leading-relaxed ">
                   {benefit.description}
                 </p>
 
                 {/* Highlight Badge */}
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-health-green/10 text-health-green rounded-full text-sm font-medium">
+                <div className="inline-flex items-center gap-2 px-3 py-2 bg-health-green/10 text-health-green rounded-full text-sm font-medium">
                   <div className="w-2 h-2 bg-health-green rounded-full"></div>
                   {benefit.highlight}
                 </div>

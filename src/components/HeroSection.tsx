@@ -1,35 +1,39 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Heart } from "lucide-react";
+import Image from "next/image";
 
 const HeroSection = () => {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-calm-blue">
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
-        {/* <img
-          src={heroImage}
-          alt="Modern healthcare technology"
-          className="w-full h-full object-cover opacity-20"
-        /> */}
-        <div className="absolute inset-0 bg-calm-blue/60"></div>
+        <Image
+          src="/images/hero.jpeg"
+          alt="Modern healthcare technology interface"
+          fill
+          className="object-cover object-center"
+          priority
+        />
+        {/* Overlay for readability */}
+        <div className="absolute inset-0 bg-black/40" aria-hidden="true"></div>
       </div>
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 text-center">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto space-y-8">
           {/* Floating Icon */}
           <div className="mb-6 inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full animate-float">
-            <Heart className="w-8 h-8 text-primary" />
+            <Heart className="w-8 h-8 text-primary" aria-hidden="true" />
           </div>
 
           {/* Main Heading */}
-          <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6 animate-fade-in">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight animate-fade-in">
             Your Health, <span className="text-primary">One Tap Away</span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-xl md:text-2xl text-soft-gray mb-8 max-w-2xl mx-auto animate-fade-in">
+          <p className="text-lg md:text-xl lg:text-2xl text-gray-100 max-w-2xl mx-auto animate-fade-in">
             Connect with healthcare professionals instantly through our
             AI-powered triage system and secure video consultations.
           </p>
@@ -39,7 +43,7 @@ const HeroSection = () => {
             <Button
               variant="hero"
               size="xl"
-              className="group"
+              className="group shadow-lg"
               onClick={() => (window.location.href = "/signup")}
             >
               Get Started
@@ -49,6 +53,7 @@ const HeroSection = () => {
             <Button
               variant="outline-hero"
               size="xl"
+              className="shadow-lg border-white/50 text-primary hover:bg-white/10"
               onClick={() => (window.location.href = "/login")}
             >
               Log In
@@ -56,27 +61,26 @@ const HeroSection = () => {
           </div>
 
           {/* Trust Indicators */}
-          <div className="mt-12 flex flex-wrap justify-center items-center gap-8 text-sm text-soft-gray animate-fade-in">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-health-green rounded-full"></div>
-              <span>HIPAA Compliant</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-health-green rounded-full"></div>
-              <span>End-to-End Encrypted</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-health-green rounded-full"></div>
-              <span>24/7 Available</span>
-            </div>
+          <div className="mt-12 flex flex-wrap justify-center items-center gap-8 text-sm text-gray-200 animate-fade-in">
+            {["HIPAA Compliant", "End-to-End Encrypted", "24/7 Available"].map(
+              (text, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-health-green rounded-full"></div>
+                  <span>{text}</span>
+                </div>
+              )
+            )}
           </div>
         </div>
       </div>
 
-      {/* Decorative Elements */}
-      <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 text-soft-gray animate-bounce">
-        <div className="w-6 h-10 border-2 border-soft-gray rounded-full flex justify-center">
-          <div className="w-1 h-3 bg-soft-gray rounded-full mt-2 animate-pulse"></div>
+      {/* Scroll Indicator */}
+      <div
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 text-gray-300 animate-bounce"
+        aria-hidden="true"
+      >
+        <div className="w-6 h-10 border-2 border-gray-300 rounded-full flex justify-center">
+          <div className="w-1 h-3 bg-gray-300 rounded-full mt-2 animate-pulse"></div>
         </div>
       </div>
     </section>

@@ -1,47 +1,92 @@
-'use client';
-import { useState } from "react";
-import { Menu, X, Heart } from "lucide-react";
+"use client";
+import { useState, useRef, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import ThemeToggle from "./ThemeToggle"; 
+import Logo from "@/components/Logo";
+import ThemeToggle from "./ThemeToggle";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+  const menuRef = useRef<HTMLDivElement>(null);
+  const isHome = pathname === "/";
 
   const navLinks = [
-    { href: "#features", label: "Features" },
-    { href: "#how-it-works", label: "How It Works" },
-    { href: "#pricing", label: "Pricing" },
-    { href: "#about", label: "About" },
-    { href: "#blog", label: "Blog" },
+    { id: "features", label: "Features" },
+    { id: "how-it-works", label: "How It Works" },
+    { id: "pricing", label: "Pricing" },
+    { id: "about", label: "About", external: true },
+    { id: "blog", label: "Blog" },
   ];
 
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+    setIsOpen(false);
+  };
+
+  const handleNavClick = (link: { id: string; external?: boolean }) => {
+    if (link.external) {
+      router.push("/about");
+      return;
+    }
+    if (isHome) {
+      scrollToSection(link.id);
+    } else {
+      router.push(`/#${link.id}`);
+    }
+    setIsOpen(false);
+  };
+
+  // Close menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  // Close menu on route change
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
+
   return (
-    <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 w-[90%] max-w-7xl bg-background/95 backdrop-blur-lg border border-border/50 rounded-2xl z-50 shadow-soft">
-      <div className="px-6">
+    <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 w-[95%] lg:w-[90%] max-w-7xl bg-background backdrop-blur-lg border border-border/50 rounded-2xl z-50 shadow-soft">
+      <div className="px-6" ref={menuRef}>
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Heart className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-foreground">HealthApp</span>
-          </div>
+          <Link href="/" className="flex items-center gap-2">
+            <Logo />
+          </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center lg:gap-8 md:gap-3">
             {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
+              <button
+                key={link.id}
+                onClick={() => handleNavClick(link)}
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 {link.label}
-              </a>
+              </button>
             ))}
           </div>
 
           {/* Desktop Actions */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-3">
             <ThemeToggle />
             <Button variant="ghost">Log In</Button>
             <Button>Get Started</Button>
@@ -69,14 +114,13 @@ const Navbar = () => {
           <div className="md:hidden border-t border-border">
             <div className="px-2 pt-2 pb-3 space-y-1">
               {navLinks.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="block px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => setIsOpen(false)}
+                <button
+                  key={link.id}
+                  onClick={() => handleNavClick(link)}
+                  className="block w-full text-left px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {link.label}
-                </a>
+                </button>
               ))}
               <div className="pt-4 space-y-2">
                 <Button variant="ghost" className="w-full">
