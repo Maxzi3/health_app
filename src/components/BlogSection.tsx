@@ -46,7 +46,7 @@ const BlogSection = () => {
 
   return (
     <section id="blog" className="py-20">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Health Insights & Updates
@@ -57,11 +57,11 @@ const BlogSection = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
+        <div className="grid md:grid-cols-3 gap-8 mb-12 w-[90%] mx-auto">
           {blogPosts.map((post) => (
             <Card
               key={post.title}
-              className="group hover:shadow-lg transition-shadow"
+              className="hover:shadow-lg transition-shadow"
             >
               <div className="aspect-video overflow-hidden rounded-t-lg">
                 <Image
@@ -79,7 +79,7 @@ const BlogSection = () => {
                   </span>
                   <span>{post.readTime}</span>
                 </div>
-                <CardTitle className="group-hover:text-primary transition-colors">
+                <CardTitle className="hover:text-primary transition-colors">
                   {post.title}
                 </CardTitle>
                 <CardDescription>{post.excerpt}</CardDescription>

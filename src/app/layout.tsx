@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { ThemeProvider } from "next-themes";
-
+import { AuthUIProvider } from "@/contexts/AuthUIContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +17,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Medify - Your AI Healthcare Assistant",
-  description: "Revolutionizing healthcare with AI-driven solutions for personalized, accessible, and secure health management.",
+  description:
+    "Revolutionizing healthcare with AI-driven solutions for personalized, accessible, and secure health management.",
 };
 
 export default function RootLayout({
@@ -30,10 +31,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <Navbar />
-          {children}
-        </ThemeProvider>
+        {" "}
+        <AuthUIProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <Navbar />
+            {children}
+          </ThemeProvider>
+        </AuthUIProvider>
       </body>
     </html>
   );

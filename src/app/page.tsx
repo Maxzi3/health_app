@@ -20,7 +20,7 @@ const page = () => {
       <PricingSection/>
       <AboutSection/>
       <SecuritySection/>
-      {/* <BlogSection/> */}
+      <BlogSection/>
       <Footer/>
     </>
   );

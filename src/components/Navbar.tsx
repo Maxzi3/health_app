@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import Logo from "@/components/Logo";
 import ThemeToggle from "./ThemeToggle";
 
+
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
@@ -89,7 +90,9 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-3">
             <ThemeToggle />
             <Button variant="ghost">Log In</Button>
-            <Button>Get Started</Button>
+            <Button onClick={() => router.push("/auth")}>
+              Get Started
+            </Button>
           </div>
 
           {/* Mobile Menu Button */}
