@@ -2,16 +2,17 @@
 
 import React from "react";
 import SignUpForm from "@/components/auth/SignUpForm";
+import { useRouter } from "next/navigation";
 
 const DoctorSignUpPage = () => {
+  const router = useRouter();
+
   const handleSwitchToLogin = () => {
-    // Implement route navigation to login
-    console.log("Switch to login");
+    router.push("/auth/login");
   };
 
   const handleBack = () => {
-    // Implement route navigation to home or previous page
-    console.log("Back to home");
+    router.push("/");
   };
 
   return (

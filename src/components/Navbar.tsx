@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import Logo from "@/components/Logo";
 import ThemeToggle from "./ThemeToggle";
 
-
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
@@ -89,10 +88,10 @@ const Navbar = () => {
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-3">
             <ThemeToggle />
-            <Button variant="ghost">Log In</Button>
-            <Button onClick={() => router.push("/auth")}>
-              Get Started
+            <Button onClick={() => router.push("/auth/login")} variant="ghost">
+              Log In
             </Button>
+            <Button onClick={() => router.push("/auth")}>Get Started</Button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -126,10 +125,16 @@ const Navbar = () => {
                 </button>
               ))}
               <div className="pt-4 space-y-2">
-                <Button variant="ghost" className="w-full">
+                <Button
+                  onClick={() => router.push("/auth/login")}
+                  variant="ghost"
+                  className="w-full"
+                >
                   Log In
                 </Button>
-                <Button className="w-full">Get Started</Button>
+                <Button onClick={() => router.push("/auth")} className="w-full">
+                  Get Started
+                </Button>
               </div>
             </div>
           </div>
