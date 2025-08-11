@@ -43,7 +43,7 @@ const SignUpForm: React.FC<SignUpFormProps> = ({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [step, setStep] = useState<"form" | "otp" | "pending">("pending");
+  const [step, setStep] = useState<"form" | "otp" | "pending">("form");
   // const { toast } = useToast();
 
   const validateForm = () => {
