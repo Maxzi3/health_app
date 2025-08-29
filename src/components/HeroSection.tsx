@@ -2,8 +2,10 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Heart } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 const HeroSection = () => {
+  const router = useRouter();
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-calm-blue">
       {/* Background Image */}
@@ -44,7 +46,7 @@ const HeroSection = () => {
               variant="hero"
               size="xl"
               className="group shadow-lg"
-              onClick={() => (window.location.href = "/signup")}
+              onClick={() => router.push("/bot")}
             >
               Get Started
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -54,7 +56,7 @@ const HeroSection = () => {
               variant="outline-hero"
               size="xl"
               className="shadow-lg border-white/50 text-primary hover:bg-white/10"
-              onClick={() => (window.location.href = "/login")}
+              onClick={() => router.push("/auth/login")}
             >
               Log In
             </Button>

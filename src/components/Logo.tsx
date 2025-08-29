@@ -9,6 +9,7 @@ const Logo = () => {
         width={150}
         height={300}
         className="block dark:hidden p-2"
+        priority
       />
 
       <Image
@@ -17,6 +18,7 @@ const Logo = () => {
         width={150}
         height={300}
         className="hidden dark:block p-2"
+        priority
       />
     </div>
   );

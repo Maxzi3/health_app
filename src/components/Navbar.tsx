@@ -91,7 +91,7 @@ const Navbar = () => {
             <Button onClick={() => router.push("/auth/login")} variant="ghost">
               Log In
             </Button>
-            <Button onClick={() => router.push("/auth")}>Get Started</Button>
+            <Button onClick={() => router.push("/bot")}>Get Started</Button>
           </div>
 
           {/* Mobile Menu Button */}

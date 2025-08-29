@@ -1,98 +1,78 @@
 "use client";
+
 import { useState } from "react";
-import { ArrowLeft, Heart, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-// import { useToast } from "@/hooks/use-toast";
 import GoogleOAuthButton from "./GoogleOAuthButton";
-import ThemeToggle from "../ThemeToggle";
 import Logo from "../Logo";
+import ThemeToggle from "../ThemeToggle";
 
-interface LoginFormProps {
-  onSwitchToSignup: () => void;
-  onForgotPassword: () => void;
-  onBack: () => void;
-}
+const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
-const LoginForm: React.FC<LoginFormProps> = ({
-  onBack,
-  onSwitchToSignup,
-  onForgotPassword,
-}) => {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+type LoginFormData = z.infer<typeof loginSchema>;
+
+const LoginForm: React.FC = () => {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  //   const { toast } = useToast();
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
 
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
-    }
-
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!validateForm()) return;
-
+  const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
+    setErrorMessage("");
 
     try {
-      // Simulate API call
-      console.log("POST /api/login", formData);
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
 
-      // Simulate delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const responseData = await res.json();
 
-      //   toast({
-      //     title: "Welcome Back!",
-      //     description: "Successfully signed in to your account.",
-      //   });
+      if (!res.ok) {
+        throw new Error(responseData.error || "Login failed");
+      }
 
-      // Redirect to dashboard
-      console.log("Redirecting to dashboard...");
-    } catch (error) {
-      //   toast({
-      //     title: "Sign In Failed",
-      //     description: "Invalid email or password. Please try again.",
-      //     variant: "destructive",
-      //   });
+      // Store access token (e.g., in localStorage or context)
+      localStorage.setItem("accessToken", responseData.accessToken);
+      // Note: In production, refreshToken should be handled via HTTP-only cookie
+      localStorage.setItem("refreshToken", responseData.refreshToken);
+
+      // Redirect based on role
+      router.push(responseData.redirectTo);
+    } catch (err: any) {
+      setErrorMessage(err.message || "Something went wrong");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const onBack = () => router.push("/");
+  const onSwitchToSignUp = () => router.push("/auth/signup");
+
   const handleGoogleAuth = () => {
-    console.log("Initiating Google OAuth login");
-    // toast({
-    //   title: "Google Sign In",
-    //   description: "Redirecting to Google authentication...",
-    // });
+    // Adjust for role-based Google OAuth if needed
+    // signIn("google", { callbackUrl: "/auth/callback" });
+    alert("Google OAuth not implemented for custom login flow");
   };
 
   return (
@@ -104,11 +84,12 @@ const LoginForm: React.FC<LoginFormProps> = ({
           className="mb-0 text-muted-foreground hover:text-foreground focus-visible-ring"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Home
+          Back
         </Button>
         <ThemeToggle />
       </div>
-      <div className="min-h-screen flex items-center justify-center px-4">
+
+      <div className="min-h-screen flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-md animate-fade-in">
           <Card className="card-medical p-8">
             {/* Header */}
@@ -116,14 +97,22 @@ const LoginForm: React.FC<LoginFormProps> = ({
               <div className="flex items-center justify-center gap-3 mb-4">
                 <Logo />
               </div>
-
               <h2 className="text-2xl font-bold text-foreground mb-2">
-                Welcome Back
+                Sign In to Your Account
               </h2>
               <p className="text-muted-foreground">
-                Sign in to your HealthConnect account
+                Access your dashboard as a patient or doctor
               </p>
             </div>
+
+            {/* Error Message */}
+            {errorMessage && (
+              <div className="text-center mb-6">
+                <p className="text-sm text-destructive font-medium">
+                  {errorMessage}
+                </p>
+              </div>
+            )}
 
             {/* Google OAuth */}
             <GoogleOAuthButton
@@ -138,13 +127,13 @@ const LoginForm: React.FC<LoginFormProps> = ({
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-card px-2 text-muted-foreground">
-                  Or continue with email
+                  Or sign in with email
                 </span>
               </div>
             </div>
 
             {/* Form */}
-            <div className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
@@ -152,18 +141,20 @@ const LoginForm: React.FC<LoginFormProps> = ({
                   <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
                   <Input
                     id="email"
-                    name="email"
                     type="email"
                     placeholder="Enter your email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className={`input-medical pl-10 ${
+                    {...register("email")}
+                    className={`pl-10 ${
                       errors.email ? "border-destructive" : ""
                     }`}
+                    aria-invalid={!!errors.email}
+                    aria-describedby={errors.email ? "email-error" : undefined}
                   />
                 </div>
                 {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email}</p>
+                  <p id="email-error" className="text-sm text-destructive">
+                    {errors.email.message}
+                  </p>
                 )}
               </div>
 
@@ -174,14 +165,16 @@ const LoginForm: React.FC<LoginFormProps> = ({
                   <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
                   <Input
                     id="password"
-                    name="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className={`input-medical pl-10 pr-10 ${
+                    {...register("password")}
+                    className={`pl-10 pr-10 ${
                       errors.password ? "border-destructive" : ""
                     }`}
+                    aria-invalid={!!errors.password}
+                    aria-describedby={
+                      errors.password ? "password-error" : undefined
+                    }
                   />
                   <button
                     type="button"
@@ -196,39 +189,35 @@ const LoginForm: React.FC<LoginFormProps> = ({
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-sm text-destructive">{errors.password}</p>
+                  <p id="password-error" className="text-sm text-destructive">
+                    {errors.password.message}
+                  </p>
                 )}
               </div>
 
-              {/* Forgot Password */}
-              <div className="text-right">
-                <button
-                  onClick={onForgotPassword}
-                  className="text-sm text-primary hover:text-primary/80 font-medium focus-visible-ring"
-                >
-                  Forgot password?
-                </button>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <Button
-              onClick={handleSubmit}
-              disabled={isLoading}
-              className="btn-primary w-full mt-6 focus-visible-ring"
-            >
-              {isLoading ? (
-                <div className="loading-pulse w-4 h-4 rounded mr-2"></div>
-              ) : null}
-              {isLoading ? "Signing In..." : "Sign In"}
-            </Button>
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="btn-primary w-full mt-6 focus-visible-ring"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="loading-pulse w-4 h-4 rounded mr-2"></div>
+                    Signing In...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
+              </Button>
+            </form>
 
             {/* Sign Up Link */}
             <div className="text-center mt-6">
               <p className="text-sm text-muted-foreground">
-                Don&apos;t have an account?{" "}
+                Don’t have an account?{" "}
                 <button
-                  onClick={onSwitchToSignup}
+                  onClick={onSwitchToSignUp}
                   className="text-primary hover:text-primary/80 font-semibold focus-visible-ring"
                 >
                   Sign Up

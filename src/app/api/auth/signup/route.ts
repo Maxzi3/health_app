@@ -1,67 +1,110 @@
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/User";
-import { z } from "zod";
 import { hashPassword } from "@/lib/auth";
 import { sendOtpEmail, notifyAdminDoctorSignup } from "@/lib/email";
-
-const signupSchema = z.object({
-  name: z.string(),
-  email: z.string().email(),
-  password: z.string().min(6),
-  role: z.enum(["PATIENT", "DOCTOR"]),
-  specialization: z.string().optional(),
-  licenseNumber: z.string().optional(),
-  documents: z.array(z.string()).optional(),
-});
+import type { Attachment } from "nodemailer/lib/mailer";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const data = signupSchema.parse(body);
+    const form = await req.formData();
+
+    const name = form.get("name") as string;
+    const email = form.get("email") as string;
+    const password = form.get("password") as string;
+    const role = form.get("role") as "PATIENT" | "DOCTOR";
+    const specialization = form.get("specialization") as string | null;
+    const cvFile = form.get("cv") as File | null; // doctor CV upload
+
+    if (!name || !email || !password || !role) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     await connectDB();
 
-    const existing = await User.findOne({ email: data.email });
+    //  check duplicate email
+    const existing = await User.findOne({ email });
     if (existing) {
-      return Response.json({ error: "Email already exists" }, { status: 400 });
-    }
-
-    const hashed = await hashPassword(data.password);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
-
-    const user = await User.create({
-      name: data.name,
-      email: data.email,
-      password: hashed,
-      role: data.role,
-      specialization: data.role === "DOCTOR" ? data.specialization : undefined,
-      licenseNumber: data.role === "DOCTOR" ? data.licenseNumber : undefined,
-      documents: data.role === "DOCTOR" ? data.documents || [] : [],
-      otp,
-      otpExpiry,
-      emailVerified: false,
-      isApproved: data.role === "DOCTOR" ? false : true,
-    });
-
-    // send otp email
-    await sendOtpEmail(user.email, user.name, otp);
-
-    // notify admin if doctor
-    if (data.role === "DOCTOR") {
-      await notifyAdminDoctorSignup({
-        name: data.name,
-        email: data.email,
-        specialization: data.specialization,
-        licenseNumber: data.licenseNumber,
+      return new Response(JSON.stringify({ error: "Email already exists" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
       });
     }
 
-    return Response.json({
-      message: "Signup successful, verify your email with the OTP",
+    const hashed = await hashPassword(password);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
+
+    //  save user in DB
+    const user = await User.create({
+      name,
+      email,
+      password: hashed,
+      role,
+      specialization: role === "DOCTOR" ? specialization : undefined,
+      otp,
+      otpExpiry,
+      emailVerified: false,
+      isApproved: role === "DOCTOR" ? false : true,
     });
-  } catch (err) {
-    console.error(err);
-    return Response.json({ error: "Something went wrong" }, { status: 500 });
+
+    //  send otp email (don’t break if it fails)
+    try {
+      await sendOtpEmail(user.email, user.name, otp);
+    } catch (emailErr: unknown) {
+      if (emailErr instanceof Error) {
+        console.error("OTP email sending failed:", emailErr.message);
+      } else {
+        console.error("OTP email sending failed:", emailErr);
+      }
+    }
+
+    //  notify admin if doctor signup
+    if (role === "DOCTOR") {
+      try {
+        const attachments: Attachment[] = [];
+
+        if (cvFile) {
+          const buffer = Buffer.from(await cvFile.arrayBuffer());
+          attachments.push({
+            filename: cvFile.name,
+            content: buffer,
+          });
+        }
+
+        await notifyAdminDoctorSignup({
+          name,
+          email,
+          specialization: specialization || "",
+          attachments,
+        });
+      } catch (adminErr: unknown) {
+        if (adminErr instanceof Error) {
+          console.error("Admin notification failed:", adminErr.message);
+        } else {
+          console.error("Admin notification failed:", adminErr);
+        }
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        message: "Signup successful, verify your email with the OTP",
+      }),
+      { status: 201, headers: { "Content-Type": "application/json" } }
+    );
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      console.error("Signup route error:", err.message);
+    } else {
+      console.error("Signup route error:", err);
+    }
+
+    return new Response(JSON.stringify({ error: "Something went wrong" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }

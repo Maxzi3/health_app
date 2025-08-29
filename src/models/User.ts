@@ -7,10 +7,9 @@ export interface IUser extends Document {
   password: string;
   role: "PATIENT" | "DOCTOR";
   specialization?: string;
-  licenseNumber?: string;
   documents?: string[];
-  otp: string;
-  otpExpiry: Date;
+  otp?: string | null;
+  otpExpiry?: Date | null;
   emailVerified: boolean;
   isApproved: boolean;
   googleId?: string;
@@ -18,6 +17,9 @@ export interface IUser extends Document {
   resetPasswordExpires?: Date;
   resetToken?: string;
   resetTokenExpiry?: Date;
+  refreshToken?: string | null;
+  needsProfileCompletion: boolean;
+  createdAt?: Date;
 }
 
 const UserSchema: Schema<IUser> = new Schema(
@@ -26,16 +28,30 @@ const UserSchema: Schema<IUser> = new Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, enum: ["PATIENT", "DOCTOR"], required: true },
+
     specialization: { type: String },
-    licenseNumber: { type: String },
     documents: [{ type: String }],
-    otp: { type: String, required: true },
-    otpExpiry: { type: Date, required: true },
+
+    otp: {
+      type: String,
+      required: false,
+      default: null, 
+    },
+    otpExpiry: {
+      type: Date,
+      required: false,
+      default: null, 
+    },
+
     emailVerified: { type: Boolean, default: false },
     isApproved: { type: Boolean, default: false },
+    needsProfileCompletion: { type: Boolean, default: false },
     googleId: { type: String },
+    refreshToken: { type: String, default: null },
     resetPasswordToken: { type: String },
-    resetPasswordExpires: { type: Date }, 
+    resetPasswordExpires: { type: Date },
+    resetToken: { type: String },
+    resetTokenExpiry: { type: Date },
   },
   { timestamps: true }
 );

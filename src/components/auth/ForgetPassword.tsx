@@ -7,21 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import ThemeToggle from "../ThemeToggle";
 import Logo from "../Logo";
+import { useRouter } from "next/navigation";
 // import { useToast } from "@/hooks/use-toast";
 
-interface ForgotPasswordFormProps {
-  onBackToLogin: () => void;
-}
-
-const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
-  onBackToLogin,
-}) => {
+const ForgotPasswordForm = () => {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState("");
   //   const { toast } = useToast();
+  const router = useRouter();
 
+  const onBackToLogin = () => {
+    router.push("/auth/login");
+  };
   const validateEmail = () => {
     if (!email.trim()) {
       setError("Email is required");

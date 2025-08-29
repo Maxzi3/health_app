@@ -1,36 +1,54 @@
-import { NextApiRequest, NextApiResponse } from "next";
+import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { generateResetToken } from "@/lib/token";
 import { sendPasswordResetEmail } from "@/lib/email";
-import { connectDB } from "@/lib/mongodb";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== "POST")
-    return res.status(405).json({ error: "Method Not Allowed" });
+export async function POST(req: Request) {
+  try {
+    const { email } = await req.json();
 
-  await connectDB();
+    if (!email) {
+      return new Response(JSON.stringify({ error: "Email is required" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-  const { email } = req.body;
-  const user = await User.findOne({ email });
+    await connectDB();
 
-  if (!user) {
-    return res
-      .status(200)
-      .json({ message: "If an account exists, a reset link has been sent." });
+    const user = await User.findOne({ email });
+
+    // ✅ Always respond success, even if user not found (to prevent email guessing)
+    if (!user) {
+      return new Response(
+        JSON.stringify({
+          message: "If an account exists, a reset link has been sent.",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // ✅ Generate reset token
+    const { token, hashedToken } = generateResetToken();
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
+    await user.save();
+
+    // ✅ Send reset email
+    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}&id=${user._id}`;
+    await sendPasswordResetEmail(user.email, user.name, resetUrl);
+
+    return new Response(
+      JSON.stringify({
+        message: "If an account exists, a reset link has been sent.",
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  } catch (err) {
+    console.error("Password reset request error:", err);
+    return new Response(JSON.stringify({ error: "Something went wrong" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
-
-  const { token, hashedToken } = generateResetToken();
-  user.resetPasswordToken = hashedToken;
-  user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
-  await user.save();
-
-  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}&id=${user._id}`;
-  await sendPasswordResetEmail(user.email, user.name, resetUrl);
-
-  res
-    .status(200)
-    .json({ message: "If an account exists, a reset link has been sent." });
 }

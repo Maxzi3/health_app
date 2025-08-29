@@ -1,4 +1,6 @@
 import nodemailer from "nodemailer";
+import type { Attachment } from "nodemailer/lib/mailer";
+
 import {
   otpEmailTemplate,
   passwordResetTemplate,
@@ -18,12 +20,18 @@ const transporter = nodemailer.createTransport({
 });
 
 // General email sender
-async function sendEmail(to: string, subject: string, html: string) {
+async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+   attachments?: Attachment[],// Optional attachments for emails like CVs or documents
+) {
   return transporter.sendMail({
     from: `"Medify" <${process.env.SMTP_USER}>`,
     to,
     subject,
     html,
+    attachments,
   });
 }
 
@@ -54,14 +62,16 @@ export async function notifyAdminDoctorSignup(details: {
   name: string;
   email: string;
   specialization?: string;
-  licenseNumber?: string;
+  attachments?: Attachment[]; // Optional attachments for CV or documents
 }) {
   return sendEmail(
     process.env.ADMIN_EMAIL!,
     "Medify: New Doctor Signup",
-    adminNotifyDoctorTemplate(details)
+    adminNotifyDoctorTemplate(details),
+    details.attachments
   );
 }
+
 
 export async function sendEmailVerified(to: string, name?: string) {
   return sendEmail(to, "Medify: Email Verified", emailVerifiedTemplate(name));

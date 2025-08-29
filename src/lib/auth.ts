@@ -1,16 +1,16 @@
 import jwt from "jsonwebtoken";
-import { Types } from "mongoose";
 import bcrypt from "bcryptjs";
 
-export function generateAuthToken(payload: {
-  id: Types.ObjectId;
-  role: string;
-}) {
-  return jwt.sign(
-    { id: payload.id.toString(), role: payload.role },
-    process.env.JWT_SECRET!,
-    { expiresIn: "7d" }
-  );
+const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "accesssecret";
+const REFRESH_TOKEN_SECRET =
+  process.env.REFRESH_TOKEN_SECRET || "refreshsecret";
+
+export function generateAccessToken(payload: object) {
+  return jwt.sign(payload, ACCESS_TOKEN_SECRET, { expiresIn: "15m" }); // short life
+}
+
+export function generateRefreshToken(payload: object) {
+  return jwt.sign(payload, REFRESH_TOKEN_SECRET, { expiresIn: "7d" }); // long life
 }
 
 export async function hashPassword(password: string) {
