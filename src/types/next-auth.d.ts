@@ -1,33 +1,34 @@
-import NextAuth, { DefaultSession, DefaultUser } from "next-auth";
+import "next-auth";
 
 declare module "next-auth" {
-  // Extend Session
   interface Session {
     user: {
       id: string;
-      role: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      role: "PATIENT" | "DOCTOR";
       isApproved: boolean;
-      mustCompleteProfile: boolean;
       needsProfileCompletion: boolean;
       specialization?: string | null;
-      licenseNumber?: string | null;
-    } & DefaultSession["user"];
+    };
   }
 
-  // Extend JWT
-  interface User extends DefaultUser {
-    role: string;
+  interface User {
+    id: string;
+    role: "PATIENT" | "DOCTOR";
     isApproved: boolean;
+    needsProfileCompletion: boolean;
     specialization?: string | null;
-    licenseNumber?: string | null;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    role: string;
+    id: string;
+    role: "PATIENT" | "DOCTOR";
     isApproved: boolean;
+    needsProfileCompletion: boolean;
     specialization?: string | null;
-    licenseNumber?: string | null;
   }
 }

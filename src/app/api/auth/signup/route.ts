@@ -1,110 +1,78 @@
 import { connectDB } from "@/lib/mongodb";
-import { User } from "@/models/User";
-import { hashPassword } from "@/lib/auth";
-import { sendOtpEmail, notifyAdminDoctorSignup } from "@/lib/email";
-import type { Attachment } from "nodemailer/lib/mailer";
+import  User  from "@/models/User";
+import { sendOtpEmail } from "@/lib/email";
+import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { generateOTP } from "@/lib/otp";
 
-export async function POST(req: Request) {
+
+export async function POST(request: Request) {
   try {
-    const form = await req.formData();
+    const { name, email, password, role } = await request.json();
 
-    const name = form.get("name") as string;
-    const email = form.get("email") as string;
-    const password = form.get("password") as string;
-    const role = form.get("role") as "PATIENT" | "DOCTOR";
-    const specialization = form.get("specialization") as string | null;
-    const cvFile = form.get("cv") as File | null; // doctor CV upload
-
+    // Validation
     if (!name || !email || !password || !role) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+      return NextResponse.json(
+        { message: "All fields are required" },
+        { status: 400 }
+      );
+    }
+
+    if (password.length < 8) {
+      return NextResponse.json(
+        { message: "Password must be at least 8 characters" },
+        { status: 400 }
       );
     }
 
     await connectDB();
 
-    //  check duplicate email
-    const existing = await User.findOne({ email });
-    if (existing) {
-      return new Response(JSON.stringify({ error: "Email already exists" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+    // Check if user already exists
+    const existingUser = await User.findOne({
+      email: email.toLowerCase(),
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { message: "User already exists" },
+        { status: 400 }
+      );
     }
 
-    const hashed = await hashPassword(password);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
 
-    //  save user in DB
-    const user = await User.create({
+    // Generate OTP
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Create user with OTP
+    const user = new User({
       name,
-      email,
-      password: hashed,
+      email: email.toLowerCase(),
+      password: hashedPassword,
       role,
-      specialization: role === "DOCTOR" ? specialization : undefined,
+      emailVerified: false,
+      isApproved: role === "PATIENT", // Patients auto-approved
+      needsProfileCompletion: role === "DOCTOR", // Doctors need profile completion
       otp,
       otpExpiry,
-      emailVerified: false,
-      isApproved: role === "DOCTOR" ? false : true,
     });
 
-    //  send otp email (don’t break if it fails)
-    try {
-      await sendOtpEmail(user.email, user.name, otp);
-    } catch (emailErr: unknown) {
-      if (emailErr instanceof Error) {
-        console.error("OTP email sending failed:", emailErr.message);
-      } else {
-        console.error("OTP email sending failed:", emailErr);
-      }
-    }
+    await user.save();
 
-    //  notify admin if doctor signup
-    if (role === "DOCTOR") {
-      try {
-        const attachments: Attachment[] = [];
+    // Send OTP email
+    // await sendOtpEmail(email, otp, name);
 
-        if (cvFile) {
-          const buffer = Buffer.from(await cvFile.arrayBuffer());
-          attachments.push({
-            filename: cvFile.name,
-            content: buffer,
-          });
-        }
-
-        await notifyAdminDoctorSignup({
-          name,
-          email,
-          specialization: specialization || "",
-          attachments,
-        });
-      } catch (adminErr: unknown) {
-        if (adminErr instanceof Error) {
-          console.error("Admin notification failed:", adminErr.message);
-        } else {
-          console.error("Admin notification failed:", adminErr);
-        }
-      }
-    }
-
-    return new Response(
-      JSON.stringify({
-        message: "Signup successful, verify your email with the OTP",
-      }),
-      { status: 201, headers: { "Content-Type": "application/json" } }
+    return NextResponse.json(
+      { message: "User created successfully. Please verify your email." },
+      { status: 201 }
     );
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      console.error("Signup route error:", err.message);
-    } else {
-      console.error("Signup route error:", err);
-    }
-
-    return new Response(JSON.stringify({ error: "Something went wrong" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+  } catch (error) {
+    console.error("Signup error:", error);
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

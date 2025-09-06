@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import GoogleOAuthButton from "./GoogleOAuthButton";
 import Logo from "../Logo";
 import ThemeToggle from "../ThemeToggle";
+import OTPVerification from "./OTPVerification";
+import { signIn, getSession } from "next-auth/react";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -26,54 +28,97 @@ const LoginForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState<"form" | "otp">("form");
+  const [otpEmail, setOtpEmail] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (data: { email: string; password: string }) => {
     setIsLoading(true);
     setErrorMessage("");
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      const result = await signIn("credentials", {
+        email: data.email,
+        password: data.password,
+        redirect: false,
       });
 
-      const responseData = await res.json();
+      if (result?.error) {
+        // Check if it's an unverified email error
+        if (result.error.includes("verify your email")) {
+          setOtpEmail(data.email);
+          setStep("otp");
+        } else {
+          setErrorMessage(result.error);
+        }
+      } else if (result?.ok) {
+        // Get session for redirect logic
+        const session = await getSession();
 
-      if (!res.ok) {
-        throw new Error(responseData.error || "Login failed");
+        if (session?.user.role === "DOCTOR") {
+          if (session.user.needsProfileCompletion) {
+            router.push("/auth/complete-profile");
+          } else if (!session.user.isApproved) {
+            router.push("/pending");
+          } else {
+            router.push("/dashboard");
+          }
+        } else {
+          router.push("/bot");
+        }
       }
-
-      // Store access token (e.g., in localStorage or context)
-      localStorage.setItem("accessToken", responseData.accessToken);
-      // Note: In production, refreshToken should be handled via HTTP-only cookie
-      localStorage.setItem("refreshToken", responseData.refreshToken);
-
-      // Redirect based on role
-      router.push(responseData.redirectTo);
-    } catch (err: any) {
-      setErrorMessage(err.message || "Something went wrong");
+    } catch (error) {
+      setErrorMessage("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Handle Google login
+  const handleGoogleSignIn = () => {
+    signIn("google");
+  };
+
+  // Handle OTP verification for unverified users
+  if (step === "otp" && otpEmail) {
+    return (
+      <OTPVerification
+        email={otpEmail}
+        onVerified={() => {
+          setStep("form");
+          setOtpEmail(null);
+          // Try login again after verification
+          router.push("/auth/login");
+        }}
+        onBack={() => setStep("form")}
+      />
+    );
+  }
+
   const onBack = () => router.push("/");
   const onSwitchToSignUp = () => router.push("/auth/signup");
 
-  const handleGoogleAuth = () => {
-    // Adjust for role-based Google OAuth if needed
-    // signIn("google", { callbackUrl: "/auth/callback" });
-    alert("Google OAuth not implemented for custom login flow");
-  };
+  if (step === "otp" && otpEmail) {
+    return (
+      <OTPVerification
+        email={otpEmail}
+        onVerified={() => {
+          setStep("form");
+          setOtpEmail(null);
+          reset();
+        }}
+        onBack={() => setStep("form")}
+      />
+    );
+  }
 
   return (
     <>
@@ -92,7 +137,6 @@ const LoginForm: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-md animate-fade-in">
           <Card className="card-medical p-8">
-            {/* Header */}
             <div className="text-center mb-8">
               <div className="flex items-center justify-center gap-3 mb-4">
                 <Logo />
@@ -101,23 +145,14 @@ const LoginForm: React.FC = () => {
                 Sign In to Your Account
               </h2>
               <p className="text-muted-foreground">
-                Access your dashboard as a patient or doctor
+                Access your dashboard or chat with our health assistant
               </p>
             </div>
 
-            {/* Error Message */}
-            {errorMessage && (
-              <div className="text-center mb-6">
-                <p className="text-sm text-destructive font-medium">
-                  {errorMessage}
-                </p>
-              </div>
-            )}
-
-            {/* Google OAuth */}
+            {/* 👇 Two Google Buttons */}
             <GoogleOAuthButton
-              onClick={handleGoogleAuth}
-              text="Sign in with Google"
+              onClick={handleGoogleSignIn}
+              text="Continue with Google"
               className="w-full mb-6"
             />
 
@@ -132,9 +167,7 @@ const LoginForm: React.FC = () => {
               </div>
             </div>
 
-            {/* Form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <div className="relative">
@@ -147,18 +180,15 @@ const LoginForm: React.FC = () => {
                     className={`pl-10 ${
                       errors.email ? "border-destructive" : ""
                     }`}
-                    aria-invalid={!!errors.email}
-                    aria-describedby={errors.email ? "email-error" : undefined}
                   />
                 </div>
                 {errors.email && (
-                  <p id="email-error" className="text-sm text-destructive">
+                  <p className="text-sm text-destructive">
                     {errors.email.message}
                   </p>
                 )}
               </div>
 
-              {/* Password */}
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
@@ -171,15 +201,11 @@ const LoginForm: React.FC = () => {
                     className={`pl-10 pr-10 ${
                       errors.password ? "border-destructive" : ""
                     }`}
-                    aria-invalid={!!errors.password}
-                    aria-describedby={
-                      errors.password ? "password-error" : undefined
-                    }
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground focus-visible-ring"
+                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
                   >
                     {showPassword ? (
                       <EyeOff className="h-5 w-5" />
@@ -189,43 +215,41 @@ const LoginForm: React.FC = () => {
                   </button>
                 </div>
                 {errors.password && (
-                  <p id="password-error" className="text-sm text-destructive">
+                  <p className="text-sm text-destructive">
                     {errors.password.message}
                   </p>
                 )}
               </div>
 
-              {/* Submit Button */}
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="btn-primary w-full mt-6 focus-visible-ring"
+                className="w-full mt-6"
               >
-                {isLoading ? (
-                  <>
-                    <div className="loading-pulse w-4 h-4 rounded mr-2"></div>
-                    Signing In...
-                  </>
-                ) : (
-                  "Sign In"
-                )}
+                {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
 
-            {/* Sign Up Link */}
+            {errorMessage && (
+              <div className="text-center mt-4">
+                <p className="text-sm text-destructive font-medium">
+                  {errorMessage}
+                </p>
+              </div>
+            )}
+
             <div className="text-center mt-6">
               <p className="text-sm text-muted-foreground">
                 Don’t have an account?{" "}
                 <button
                   onClick={onSwitchToSignUp}
-                  className="text-primary hover:text-primary/80 font-semibold focus-visible-ring"
+                  className="text-primary hover:text-primary/80 font-semibold"
                 >
                   Sign Up
                 </button>
               </p>
             </div>
 
-            {/* Security Note */}
             <div className="mt-6 text-center">
               <p className="text-xs text-muted-foreground">
                 🔒 Your data is protected with end-to-end encryption

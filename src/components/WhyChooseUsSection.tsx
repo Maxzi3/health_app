@@ -30,10 +30,10 @@ const WhyChooseUsSection = () => {
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Why Choose <span className="text-primary">Medify</span>?
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+            Why Choose <span className="text-primary">Us</span>?
           </h2>
-          <p className="text-xl text-soft-gray max-w-2xl mx-auto">
+          <p className="text-lg text-soft-gray max-w-2xl mx-auto">
             Experience healthcare built on trust, accessibility, and
             cutting-edge security standards.
           </p>
@@ -53,7 +53,7 @@ const WhyChooseUsSection = () => {
 
               {/* Content */}
               <div className="space-y-4">
-                <h3 className="text-2xl font-semibold text-foreground group-hover:text-primary transition-colors">
+                <h3 className="text-xl font-semibold text-foreground group-hover:text-primary transition-colors">
                   {benefit.title}
                 </h3>
 

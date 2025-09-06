@@ -30,10 +30,10 @@ const HowItWorksSection = () => {
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             How It <span className="text-primary">Works</span>
           </h2>
-          <p className="text-xl text-soft-gray max-w-2xl mx-auto">
+          <p className="text-lg text-soft-gray max-w-2xl mx-auto">
             Get the care you need in three simple steps. It&apos;s that easy.
           </p>
         </div>

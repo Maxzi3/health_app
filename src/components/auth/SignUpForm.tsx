@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Mail,
@@ -17,7 +16,6 @@ import {
   Upload,
   CheckCircle,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,9 +24,8 @@ import GoogleOAuthButton from "./GoogleOAuthButton";
 import OTPVerification from "./OTPVerification";
 import Logo from "../Logo";
 import ThemeToggle from "../ThemeToggle";
-import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 
-/* ------------------------- Validation Schema ------------------------- */
 const signUpSchema = z
   .object({
     role: z.enum(["PATIENT", "DOCTOR"]),
@@ -54,7 +51,7 @@ const signUpSchema = z
         ["application/pdf", "image/jpeg", "image/png"].includes(
           data.licenseFile.type
         ) &&
-        data.licenseFile.size <= 5 * 1024 * 1024), // 5MB limit
+        data.licenseFile.size <= 5 * 1024 * 1024),
     {
       message: "License file is required for doctors (PDF, JPG, PNG, max 5MB)",
       path: ["licenseFile"],
@@ -63,19 +60,20 @@ const signUpSchema = z
 
 type SignUpFormData = z.infer<typeof signUpSchema>;
 
-/* ------------------------- Component Props ------------------------- */
 interface SignUpFormProps {
   role: "PATIENT" | "DOCTOR";
 }
 
-/* ------------------------- Component ------------------------- */
 const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
   const router = useRouter();
   const [step, setStep] = useState<"form" | "otp" | "pending">("form");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [otpEmail, setOtpEmail] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState("");
+  const [formStatus, setFormStatus] = useState<{
+    type: "success" | "error" | "";
+    message: string;
+  }>({ type: "", message: "" });
 
   const {
     register,
@@ -87,13 +85,9 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
     defaultValues: { role },
   });
 
-  /* ------------------------- Handlers ------------------------- */
   const onBack = () => router.push("/");
   const onSwitchToLogin = () => router.push("/auth/login");
 
-  // const onSubmit = async (data: SignUpFormData) => {
-  //   console.log("Form Data:", data);
-  // }
   const onSubmit = async (data: SignUpFormData) => {
     try {
       const formData = new FormData();
@@ -111,27 +105,32 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
         }
       }
 
-      const res = await fetch("/api/auth/signup", {
+      const response = await fetch("/api/auth/signup", {
         method: "POST",
         body: formData,
       });
 
-      const responseData = await res.json();
-
-      if (!res.ok) {
-        throw new Error(responseData.error || "Signup failed");
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Signup failed");
       }
 
-      // Display success message briefly before OTP step
-      setSuccessMessage(responseData.message || "Please verify your email");
+      setFormStatus({
+        type: "success",
+        message: result.message || "Account created successfully!",
+      });
       setOtpEmail(data.email);
+
       setTimeout(() => {
-        setSuccessMessage("");
+        setFormStatus({ type: "", message: "" });
         setStep("otp");
-      }, 2000); // 2-second delay for UX
+      }, 2000);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      console.error(err);
-      alert(err.message || "Something went wrong");
+      setFormStatus({
+        type: "error",
+        message: err.message || "Something went wrong",
+      });
     }
   };
 
@@ -143,11 +142,13 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
     }
   };
 
-  const handleGoogleAuth = () => {
-    signIn("google", { callbackUrl: `/auth/callback?role=${role}` });
+  const handleGoogleAuth = (role: "PATIENT" | "DOCTOR") => {
+    document.cookie = `intended-role=${role}; path=/; max-age=300`;
+    signIn("google", {
+      callbackUrl: role === "DOCTOR" ? "/auth/complete-profile" : "/bot",
+    });
   };
 
-  /* ------------------------- Step: OTP ------------------------- */
   if (step === "otp" && otpEmail) {
     return (
       <OTPVerification
@@ -158,7 +159,6 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
     );
   }
 
-  /* ------------------------- Step: Pending (doctor) ------------------------- */
   if (step === "pending") {
     return (
       <>
@@ -211,7 +211,6 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
     );
   }
 
-  /* ------------------------- Step: Form ------------------------- */
   return (
     <>
       <div className="flex items-center justify-between p-2">
@@ -229,12 +228,10 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
       <div className="min-h-screen flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-md animate-fade-in">
           <Card className="card-medical p-8">
-            {/* Header */}
             <div className="text-center mb-8">
               <div className="flex items-center justify-center gap-3 mb-4">
                 <Logo />
               </div>
-
               <h2 className="text-2xl font-bold text-foreground mb-2">
                 {role === "PATIENT"
                   ? "Join Your Health Journey"
@@ -245,19 +242,25 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
               </p>
             </div>
 
-            {/* Success Message */}
-            {successMessage && (
+            {formStatus.type === "success" && (
               <div className="text-center mb-6">
                 <p className="text-sm text-green-500 font-medium flex items-center justify-center gap-1">
                   <CheckCircle className="h-4 w-4 text-green-500" />
-                  {successMessage}
+                  {formStatus.message}
                 </p>
               </div>
             )}
 
-            {/* Google OAuth */}
+            {formStatus.type === "error" && (
+              <div className="text-center mb-6">
+                <p className="text-sm text-destructive font-medium">
+                  {formStatus.message}
+                </p>
+              </div>
+            )}
+
             <GoogleOAuthButton
-              onClick={handleGoogleAuth}
+              onClick={() => handleGoogleAuth(role)}
               text={`Sign up with Google as ${role.toLowerCase()}`}
               className="w-full mb-6"
             />
@@ -273,9 +276,7 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
               </div>
             </div>
 
-            {/* Form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Full Name */}
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
                 <div className="relative">
@@ -300,7 +301,6 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
                 )}
               </div>
 
-              {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <div className="relative">
@@ -324,7 +324,6 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
                 )}
               </div>
 
-              {/* Password */}
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
@@ -361,7 +360,6 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
                 )}
               </div>
 
-              {/* Confirm Password */}
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <div className="relative">
@@ -403,7 +401,6 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
                 )}
               </div>
 
-              {/* Doctor-specific fields */}
               {role === "DOCTOR" && (
                 <>
                   <div className="space-y-2">
@@ -442,9 +439,11 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
                         id="licenseFile"
                         type="file"
                         accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(e) =>
-                          setValue("licenseFile", e.target.files?.[0] || null)
-                        }
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) {
+                            setValue("licenseFile", e.target.files[0]);
+                          }
+                        }}
                         className={`pl-10 file:mr-4 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 ${
                           errors.licenseFile ? "border-destructive" : ""
                         }`}
@@ -466,7 +465,6 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
                 </>
               )}
 
-              {/* Submit Button */}
               <Button
                 type="submit"
                 disabled={isSubmitting}
@@ -483,7 +481,6 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
               </Button>
             </form>
 
-            {/* Sign In Link */}
             <div className="text-center mt-6">
               <p className="text-sm text-muted-foreground">
                 Already have an account?{" "}
@@ -496,7 +493,6 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
               </p>
             </div>
 
-            {/* Security Note */}
             <div className="mt-6 text-center">
               <p className="text-xs text-muted-foreground">
                 🔒 Your data is protected with end-to-end encryption

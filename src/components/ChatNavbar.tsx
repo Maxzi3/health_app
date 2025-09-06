@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import Logo from "./Logo";
 import { Menu, X, Settings, LogIn, LogOut, Trash2, User } from "lucide-react";
@@ -12,26 +13,74 @@ import {
 } from "@/components/ui/dropdown-menu";
 import ThemeToggle from "./ThemeToggle";
 
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { useAuthUser } from "@/store/auth";
+
 const ChatNavbar = () => {
+  const { user, isAuthenticated } = useAuthUser(); // Access user and logout from Zustand
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSignIn = () => {
-    console.log("Sign in clicked");
+    router.push("/auth/login");
   };
 
-  const deleteAccount = () => {
-    console.log("Delete account clicked");
+  //  const handleLogout = async () => {
+  //    setLoading(true);
+  //    try {
+  //      await signOut({
+  //        callbackUrl: "/auth/login",
+  //        redirect: true,
+  //      });
+  //    } catch (error) {
+  //      console.error("Logout error:", error);
+  //    } finally {
+  //      setLoading(false);
+  //    }
+  //  };
+
+  const handleOpenDashboard = () => {
+    if (user) {
+      const dashboardPath =
+        user.role === "DOCTOR" ? "/dashboard/doctor" : "/dashboard/patient";
+      router.push(dashboardPath);
+    }
   };
 
-  const signOut = () => {
-    console.log("Sign out clicked");
-  };
+// const handleDeleteAccount = async () => {
+//   setLoading(true);
+//   setError("");
 
-  const onOpenDashboard = () => {
-    console.log("Dashboard clicked");
-  };
+//   try {
+//     const response = await fetch("/api/auth/delete", {
+//       method: "DELETE",
+//       headers: {
+//         "Content-Type": "application/json",
+//       },
+//     });
 
-  const isAuthenticated = true;
+//     const result = await response.json();
+
+//     if (!response.ok) {
+//       throw new Error(result.message || "Failed to delete account");
+//     }
+
+//     // Sign out the user after successful deletion
+//     await signOut({
+//       callbackUrl: "/auth/login?message=account-deleted",
+//       redirect: true,
+//     });
+//   } catch (err: any) {
+//     setError(err.message);
+//   } finally {
+//     setLoading(false);
+//   }
+// };
+
+ 
+
+ 
 
   return (
     <div className="flex items-center justify-between p-2 border-b bg-card">
@@ -65,21 +114,24 @@ const ChatNavbar = () => {
               <>
                 <DropdownMenuItem className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
-                  Maxwell
+                  {user?.name} ({user?.role.toLowerCase()})
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={onOpenDashboard}
+                  onClick={handleOpenDashboard}
                   className="cursor-pointer"
                 >
                   <Settings className="mr-2 h-4 w-4" />
                   Dashboard
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={signOut} className="cursor-pointer">
+                <DropdownMenuItem
+                  // onClick={handleLogout}
+                  className="cursor-pointer"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={deleteAccount}
+                  // onClick={deleteAccount}
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -102,36 +154,41 @@ const ChatNavbar = () => {
       {/* Desktop Menu */}
       <div className="hidden md:flex items-center space-x-4">
         {isAuthenticated ? (
-          <DropdownMenu>
+          <>
             <Button
               variant="ghost"
               size="sm"
-              onClick={onOpenDashboard}
+              onClick={handleOpenDashboard}
               className="hover:bg-muted"
             >
               <Settings className="mr-2 h-4 w-4" />
               Dashboard
             </Button>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="hover:bg-muted">
-                <User className="mr-2 h-4 w-4" />
-                Maxwell
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 ">
-              <DropdownMenuItem onClick={signOut} className="cursor-pointer">
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={deleteAccount}
-                className="cursor-pointer text-destructive focus:text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Account
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="hover:bg-muted">
+                  <User className="mr-2 h-4 w-4" />
+                  {user?.name} ({user?.role.toLowerCase()})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  // onClick={handleLogout}
+                  className="cursor-pointer"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  // onClick={deleteAccount}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Account
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
         ) : (
           <Button variant="default" size="sm" onClick={handleSignIn}>
             <LogIn className="mr-2 h-4 w-4" />

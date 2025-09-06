@@ -1,71 +1,60 @@
+import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { User } from "@/models/User";
+import User from "@/models/User";
 import { sendOtpEmail } from "@/lib/email";
+import { generateOTP } from "@/lib/otp";
 
-export async function POST(req: Request) {
+
+export async function POST(request: Request) {
   try {
-    const { email } = await req.json();
+    const { email } = await request.json();
 
     if (!email) {
-      return new Response(
-        JSON.stringify({ success: false, message: "Email is required" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+      return NextResponse.json(
+        { message: "Email is required" },
+        { status: 400 }
       );
     }
 
     await connectDB();
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+    });
+
     if (!user) {
-      return new Response(
-        JSON.stringify({ success: false, message: "User not found" }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
-      );
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
     if (user.emailVerified) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "Email already verified",
-        }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+      return NextResponse.json(
+        { message: "Email already verified" },
+        { status: 400 }
       );
     }
 
-    // generate new OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
+    // Generate new OTP
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    user.otp = otp;
-    user.otpExpiry = otpExpiry;
-    await user.save();
+    // Update user with new OTP
+    await User.findByIdAndUpdate(user._id, {
+      otp,
+      otpExpiry,
+    });
 
-    try {
-      await sendOtpEmail(user.email, user.name, otp);
-    } catch (emailErr: any) {
-      console.error("Failed to send OTP email:", emailErr.message);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "Could not send OTP email",
-        }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
+    // Send OTP email
+    await sendOtpEmail(email, otp, user.name);
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "New OTP sent to your email",
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
+    return NextResponse.json(
+      { message: "OTP sent successfully" },
+      { status: 200 }
     );
-  } catch (err: any) {
-    console.error("Resend OTP error:", err.message);
-    return new Response(
-      JSON.stringify({ success: false, message: "Something went wrong" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+  } catch (error) {
+    console.error("Resend OTP error:", error);
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
     );
   }
 }

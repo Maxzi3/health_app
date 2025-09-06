@@ -48,10 +48,10 @@ const BlogSection = () => {
     <section id="blog" className="py-20">
       <div className="container mx-auto px-">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
             Health Insights & Updates
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
             Stay informed with the latest health tips, medical insights, and
             wellness advice from our experts
           </p>

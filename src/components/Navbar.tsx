@@ -132,7 +132,7 @@ const Navbar = () => {
                 >
                   Log In
                 </Button>
-                <Button onClick={() => router.push("/auth")} className="w-full">
+                <Button onClick={() => router.push("/bot")} className="w-full">
                   Get Started
                 </Button>
               </div>

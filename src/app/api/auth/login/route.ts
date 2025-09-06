@@ -6,6 +6,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "@/lib/auth";
+import { sendOtpEmail } from "@/lib/email";
 
 const loginSchema = z.object({
   email: z.email(),
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
     await connectDB();
 
     const user = await User.findOne({ email });
-    if (!user) {
+    if (!user || !user.password) {
       return new Response(
         JSON.stringify({ error: "Invalid email or password" }),
         {
@@ -30,9 +31,26 @@ export async function POST(req: Request) {
       );
     }
 
+    // 🔒 Handle unverified email
     if (!user.emailVerified) {
+      const now = Date.now();
+      const otpExpired = !user.otpExpiry || user.otpExpiry.getTime() < now;
+
+      if (otpExpired) {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        user.otp = otp;
+        user.otpExpiry = new Date(now + 15 * 60 * 1000); // 15 min expiry
+        await user.save();
+
+        // send OTP email
+        await sendOtpEmail(user.email, user.name, otp);
+      }
+
       return new Response(
-        JSON.stringify({ error: "Please verify your email first" }),
+        JSON.stringify({
+          error: "Email not verified. A verification code has been sent.",
+          requiresVerification: true,
+        }),
         {
           status: 403,
           headers: { "Content-Type": "application/json" },
@@ -40,9 +58,10 @@ export async function POST(req: Request) {
       );
     }
 
+    //  Doctors must be approved
     if (user.role === "DOCTOR" && !user.isApproved) {
       return new Response(
-        JSON.stringify({ error: "Your account is under review by admin" }),
+        JSON.stringify({ error: "Your account is under review" }),
         {
           status: 403,
           headers: { "Content-Type": "application/json" },
@@ -50,16 +69,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!user.password) {
-      return new Response(
-        JSON.stringify({ error: "No password set for this account" }),
-        {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-
+    // 🔑 Validate password
     const isValid = await comparePassword(password, user.password);
     if (!isValid) {
       return new Response(
@@ -71,21 +81,19 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔑 Generate Tokens
+    // ✅ Generate Tokens
     const accessToken = generateAccessToken({ id: user._id, role: user.role });
     const refreshToken = generateRefreshToken({ id: user._id });
 
-    // Store refresh token in DB for logout/revocation support
     user.refreshToken = refreshToken;
     await user.save();
 
-    // // Role-based redirect
-    // const redirectTo =
-    //   user.role === "DOCTOR"
-    //     ? process.env.DOCTOR_DASHBOARD_URL || "/dashboard/doctor"
-    //     : process.env.PATIENT_DASHBOARD_URL || "/dashboard/patient";
+    const redirectTo = process.env.CHATBOT_URL;
+    const isProd = process.env.NODE_ENV === "production";
 
-    // Return access token in body, refresh token in HTTP-only cookie
+    let cookie = `refreshToken=${refreshToken}; HttpOnly; Path=/; SameSite=Strict; Max-Age=604800`;
+    if (isProd) cookie += "; Secure";
+
     return new Response(
       JSON.stringify({
         accessToken,
@@ -95,13 +103,13 @@ export async function POST(req: Request) {
           email: user.email,
           role: user.role,
         },
-        // redirectTo,
+        redirectTo,
       }),
       {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Set-Cookie": `refreshToken=${refreshToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=604800`, // 7 days
+          "Set-Cookie": cookie,
         },
       }
     );

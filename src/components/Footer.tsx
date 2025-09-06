@@ -196,7 +196,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="border-t border-background/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-background/70 text-sm">
-            © 2024 Medify. Empowering healthier lives, one click at a time.
+            © 2025 Medify. Empowering healthier lives, one click at a time.
           </p>
           <div className="flex gap-4 text-sm text-background/70">
             <span className="flex items-center gap-1">

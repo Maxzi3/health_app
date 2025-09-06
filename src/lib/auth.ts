@@ -1,5 +1,12 @@
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+
+export interface DecodedToken extends JwtPayload {
+  id: string;
+  role: "PATIENT" | "DOCTOR";
+  isApproved: boolean;
+  needsProfileCompletion?: boolean;
+}
 
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "accesssecret";
 const REFRESH_TOKEN_SECRET =
@@ -19,4 +26,13 @@ export async function hashPassword(password: string) {
 
 export async function comparePassword(plain: string, hashed: string) {
   return bcrypt.compare(plain, hashed);
+}
+
+export function verifyAccessToken(token: string): DecodedToken | null {
+  try {
+    return jwt.verify(token, ACCESS_TOKEN_SECRET) as DecodedToken;
+  } catch (err) {
+    console.error("Invalid access token:", err);
+    return null;
+  }
 }

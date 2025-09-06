@@ -1,4 +1,5 @@
-import mongoose, { Schema, Document, Model, Types } from "mongoose";
+// models/User.ts
+import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface IUser extends Document {
   _id: Types.ObjectId;
@@ -7,6 +8,9 @@ export interface IUser extends Document {
   password: string;
   role: "PATIENT" | "DOCTOR";
   specialization?: string;
+  licenseNumber?: string;
+  experience?: number;
+  bio?: string;
   documents?: string[];
   otp?: string | null;
   otpExpiry?: Date | null;
@@ -20,29 +24,27 @@ export interface IUser extends Document {
   refreshToken?: string | null;
   needsProfileCompletion: boolean;
   createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const UserSchema: Schema<IUser> = new Schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    role: { type: String, enum: ["PATIENT", "DOCTOR"], required: true },
-
-    specialization: { type: String },
-    documents: [{ type: String }],
-
-    otp: {
+    password: {
       type: String,
-      required: false,
-      default: null, 
+      required: function () {
+        return !this.googleId;
+      },
     },
-    otpExpiry: {
-      type: Date,
-      required: false,
-      default: null, 
-    },
-
+    role: { type: String, enum: ["PATIENT", "DOCTOR"], required: true },
+    specialization: { type: String },
+    licenseNumber: { type: String },
+    experience: { type: Number },
+    bio: { type: String },
+    documents: [{ type: String }],
+    otp: { type: String },
+    otpExpiry: { type: Date },
     emailVerified: { type: Boolean, default: false },
     isApproved: { type: Boolean, default: false },
     needsProfileCompletion: { type: Boolean, default: false },
@@ -56,5 +58,6 @@ const UserSchema: Schema<IUser> = new Schema(
   { timestamps: true }
 );
 
-export const User: Model<IUser> =
-  mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+// Clear cached model to prevent conflicts
+delete mongoose.models.User;
+export default mongoose.model<IUser>("User", UserSchema);

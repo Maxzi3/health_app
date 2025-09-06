@@ -30,12 +30,12 @@ const HeroSection = () => {
           </div>
 
           {/* Main Heading */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight animate-fade-in">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white leading-tight animate-fade-in">
             Your Health, <span className="text-primary">One Tap Away</span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-lg md:text-xl lg:text-2xl text-gray-100 max-w-2xl mx-auto animate-fade-in">
+          <p className="text-lg md:text-lg lg:text-xl text-gray-100 max-w-2xl mx-auto animate-fade-in">
             Connect with healthcare professionals instantly through our
             AI-powered triage system and secure video consultations.
           </p>

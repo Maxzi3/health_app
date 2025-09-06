@@ -1,75 +1,51 @@
-import { sendEmailVerified } from "@/lib/email";
+import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { User } from "@/models/User";
-import { z } from "zod";
+import  User  from "@/models/User";
 
-const verifyOtpSchema = z.object({
-  email: z.email(),
-  otp: z.string().length(6),
-});
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
-    const data = verifyOtpSchema.parse(body);
+    const { email, otp } = await request.json();
+
+    if (!email || !otp) {
+      return NextResponse.json(
+        { message: "Email and OTP are required" },
+        { status: 400 }
+      );
+    }
 
     await connectDB();
 
-    const user = await User.findOne({ email: data.email });
+    // Find user with matching email and OTP
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+      otp: otp,
+      otpExpiry: { $gt: new Date() }, // OTP not expired
+    });
+
     if (!user) {
-      return new Response(JSON.stringify({ error: "User not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+      return NextResponse.json(
+        { message: "Invalid or expired OTP" },
+        { status: 400 }
+      );
     }
 
-    if (user.emailVerified) {
-      return new Response(JSON.stringify({ message: "Already verified" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    if (user.otp !== data.otp) {
-      return new Response(JSON.stringify({ error: "Invalid OTP" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    if (user.otpExpiry && user.otpExpiry < new Date()) {
-      return new Response(JSON.stringify({ error: "OTP expired" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    user.emailVerified = true;
-    user.otp = null;
-    user.otpExpiry = null;
-    await user.save();
-
-    // Try sending email, but don’t block verification if it fails
-    try {
-      await sendEmailVerified(user.email, user.name);
-    } catch (emailErr) {
-      console.error("Email sending failed:", emailErr);
-    }
-
-    const successMsg =
-      user.role === "DOCTOR"
-        ? "Email verified. Please wait for admin approval."
-        : "Email verified successfully";
-
-    return new Response(JSON.stringify({ message: successMsg }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+    // Update user as verified and clear OTP
+    await User.findByIdAndUpdate(user._id, {
+      emailVerified: true,
+      otp: null,
+      otpExpiry: null,
     });
-  } catch (err) {
-    console.error(err);
-    return new Response(JSON.stringify({ error: "Something went wrong" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+
+    return NextResponse.json(
+      { message: "Email verified successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("OTP verification error:", error);
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

@@ -88,7 +88,7 @@ const TestimonialsSection = () => {
             <div className="mb-12">
               <h2
                 id="testimonials-heading"
-                className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4"
+                className="text-2xl sm:text-4xl md:text-4xl font-bold tracking-tight mb-4"
               >
                 What Our <span className="text-primary">Users Say</span>
               </h2>
@@ -113,7 +113,7 @@ const TestimonialsSection = () => {
                   </div>
 
                   {/* Testimonial Content */}
-                  <p className="text-lg  leading-relaxed italic">
+                  <p className="text-sm  leading-relaxed italic">
                     &quot;{testimonials[currentTestimonial].content}&quot;
                   </p>
 
