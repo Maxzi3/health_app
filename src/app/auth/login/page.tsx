@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -6,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { signIn, getSession } from "next-auth/react";
 
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email"),
+  email: z.email("Please enter a valid email"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -32,6 +33,9 @@ export default function LoginPage() {
   const [otpEmail, setOtpEmail] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState<
+    "PATIENT" | "DOCTOR" | null
+  >(null);
 
   const {
     register,
@@ -74,7 +78,7 @@ export default function LoginPage() {
           } else if (!session.user.isApproved) {
             router.push("/pending");
           } else {
-            router.push("/dashboard");
+            router.push("/dashboard/doctor");
           }
         } else {
           router.push("/bot");
@@ -88,12 +92,15 @@ export default function LoginPage() {
   };
 
   const handleGoogleSignIn = async (role: "PATIENT" | "DOCTOR") => {
+    setGoogleLoading(role);
     document.cookie = `intended-role=${role}; path=/; max-age=3600`;
     await signIn("google", { callbackUrl });
+    setGoogleLoading(null); 
   };
 
   const onBack = () => router.push("/");
   const onSwitchToSignUp = () => router.push("/auth/signup");
+  const onSwitchToforgetPassword = () => router.push("/auth/forgot-password");
 
   if (step === "otp" && otpEmail) {
     return (
@@ -114,6 +121,7 @@ export default function LoginPage() {
     <>
       <div className="flex items-center justify-between p-2">
         <Button
+          type="button"
           onClick={onBack}
           variant="ghost"
           className="text-muted-foreground hover:text-foreground focus-visible-ring"
@@ -143,11 +151,14 @@ export default function LoginPage() {
               onClick={() => handleGoogleSignIn("PATIENT")}
               text="Sign in as Patient with Google"
               className="w-full"
+              loading={googleLoading === "PATIENT"}
             />
+
             <GoogleOAuthButton
               onClick={() => handleGoogleSignIn("DOCTOR")}
               text="Sign in as Doctor with Google"
               className="w-full"
+              loading={googleLoading === "DOCTOR"}
             />
           </div>
 
@@ -223,12 +234,13 @@ export default function LoginPage() {
             </div>
 
             <div className="flex justify-end">
-              <a
-                href="/auth/forgot-password"
+              <button
+                type="button"
+                onClick={onSwitchToforgetPassword}
                 className="text-sm text-primary hover:text-primary/80 focus-visible-ring"
               >
                 Forgot your password?
-              </a>
+              </button>
             </div>
 
             <Button
@@ -238,7 +250,7 @@ export default function LoginPage() {
             >
               {isLoading ? (
                 <>
-                  <div className="loading-pulse w-4 h-4 rounded mr-2"></div>
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Signing In...
                 </>
               ) : (

@@ -1,4 +1,3 @@
-// app/api/auth/[...nextauth]/route.ts
 import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -32,6 +31,11 @@ export const authOptions: NextAuthOptions = {
 
         if (!user || !user.password) {
           throw new Error("Invalid email or password");
+        }
+
+        //  Block deleted accounts
+        if (!user || user.isDeleted) {
+          throw new Error("Account not found or has been deleted.");
         }
 
         const isPasswordValid = await bcrypt.compare(
@@ -111,7 +115,7 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       if (account?.provider === "google") {
         await connectDB();
 
@@ -120,6 +124,12 @@ export const authOptions: NextAuthOptions = {
           const existingUser = await User.findOne({
             $or: [{ email: user.email?.toLowerCase() }, { googleId: user.id }],
           });
+
+          // ❌ Block deleted accounts before doing anything else
+          if (existingUser?.isDeleted) {
+            console.warn("Blocked login attempt for deleted user:", user.email);
+            throw new Error("Your account has been deleted."); 
+          }
 
           if (existingUser) {
             // User exists, update their Google ID if not set

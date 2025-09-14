@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
+import { Nunito_Sans } from "next/font/google"; // ✅ switched to Nunito Sans
 import "./globals.css";
 import Providers from "./Providers";
 import { Toaster } from "react-hot-toast";
 
-const poppins = Poppins({
+// ✅ Configure Nunito Sans
+const nunitoSans = Nunito_Sans({
   subsets: ["latin"],
-  weight: ["400", "600", "700"], // you can choose the weights you need
-  variable: "--font-poppins", // custom CSS variable
+  weight: ["400", "600", "700"], // same weights you had for Poppins
+  variable: "--font-nunito-sans", // updated variable name
   display: "swap",
 });
 
@@ -24,7 +25,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${poppins.className} antialiased`}>
+      {/* ✅ switched className */}
+      <body className={`${nunitoSans.className} antialiased`}>
         <Providers>{children}</Providers>
         <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
       </body>

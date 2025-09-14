@@ -6,7 +6,15 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import {
+  ArrowLeft,
+  Mail,
+  Lock,
+  User,
+  Eye,
+  EyeOff,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,6 +46,9 @@ export default function SignupPage() {
   const [step, setStep] = useState<"role" | "form" | "otp">("role");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState<
+    "PATIENT" | "DOCTOR" | null
+  >(null);
 
   const {
     register,
@@ -62,10 +73,12 @@ export default function SignupPage() {
   };
 
   const handleGoogleSignup = async (role: "PATIENT" | "DOCTOR") => {
+    setGoogleLoading(role);
     document.cookie = `intended-role=${role}; path=/; max-age=3600`;
     await signIn("google", {
       callbackUrl: "/auth/redirect-handler",
     });
+    setGoogleLoading(null);
   };
 
   const onBack = () => router.push("/");
@@ -171,12 +184,15 @@ export default function SignupPage() {
             <GoogleOAuthButton
               onClick={() => handleGoogleSignup("PATIENT")}
               text="Sign up as Patient with Google"
-              className="w-full mb-4"
+              className="w-full"
+              loading={googleLoading === "PATIENT"}
             />
+
             <GoogleOAuthButton
               onClick={() => handleGoogleSignup("DOCTOR")}
               text="Sign up as Doctor with Google"
               className="w-full"
+              loading={googleLoading === "DOCTOR"}
             />
           </Card>
         </div>
@@ -359,8 +375,7 @@ export default function SignupPage() {
               >
                 {isSubmitting ? (
                   <>
-                    <div className="loading-pulse w-4 h-4 rounded mr-2"></div>
-                    Creating Account...
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   </>
                 ) : (
                   "Create Account"

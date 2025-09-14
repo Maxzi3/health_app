@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import { authOptions } from "../[...nextauth]/route";
 
-export async function DELETE(request: Request) {
+export async function DELETE() {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -13,15 +14,21 @@ export async function DELETE(request: Request) {
 
     await connectDB();
 
-    // Delete the user
-    const deletedUser = await User.findByIdAndDelete(session.user.id);
+    // Find user
+    const user = await User.findById(session.user.id);
 
-    if (!deletedUser) {
+    if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
+    // ✅ Soft delete: mark as deleted
+    user.isDeleted = true;
+    user.deletedAt = new Date();
+    await user.save();
+
+
     return NextResponse.json(
-      { message: "Account deleted successfully" },
+      { message: "Account deleted (soft delete applied)" },
       { status: 200 }
     );
   } catch (error) {
@@ -32,3 +39,8 @@ export async function DELETE(request: Request) {
     );
   }
 }
+
+
+// Queries everywhere else → always filter out deleted users unless you want to include them:
+
+// User.find({ isDeleted: false });

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ArrowLeft, Heart, Mail, CheckCircle } from "lucide-react";
+import { ArrowLeft, Heart, Mail, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -165,7 +165,7 @@ const ForgotPasswordForm = () => {
               className="btn-primary w-full mt-6 focus-visible-ring"
             >
               {isLoading ? (
-                <div className="loading-pulse w-4 h-4 rounded mr-2"></div>
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : null}
               {isLoading ? "Sending Reset Link..." : "Send Reset Link"}
             </Button>

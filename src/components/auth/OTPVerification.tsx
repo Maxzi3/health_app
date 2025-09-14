@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft, Mail, CheckCircle } from "lucide-react";
+import { ArrowLeft, Mail, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -229,7 +229,7 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
             >
               {isLoading ? (
                 <>
-                  <div className="loading-pulse w-4 h-4 rounded mr-2"></div>
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Verifying...
                 </>
               ) : (

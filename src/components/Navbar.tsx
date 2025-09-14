@@ -64,13 +64,12 @@ const Navbar = () => {
   }, [pathname]);
 
   return (
-    <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 w-[95%] lg:w-[90%] max-w-7xl bg-background backdrop-blur-lg border border-border/50 rounded-2xl z-50 shadow-soft">
+    <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 w-[95%] lg:w-[90%] max-w-7xl bg-background backdrop-blur-lg border border-border/50 rounded-2xl z-40 shadow-soft">
       <div className="px-6" ref={menuRef}>
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <Logo />
-          </Link>
+
+          <Logo />
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center lg:gap-8 md:gap-3">

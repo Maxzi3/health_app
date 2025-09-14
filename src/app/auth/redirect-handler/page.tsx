@@ -1,25 +1,26 @@
 "use client";
 
+import LogoSpinnerOverlay from "@/components/LogoSpinnerOverlay";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+
 
 export default function RedirectHandler() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [redirecting, setRedirecting] = useState(true);
 
   useEffect(() => {
-    if (status === "loading") return; // Still loading
+    if (status === "loading") return; // Still loading session
 
     if (!session) {
-      // Not authenticated, redirect to login
       router.replace("/auth/login");
       return;
     }
 
     const { role, isApproved, needsProfileCompletion } = session.user;
 
-    // Handle redirects based on user role and status
     if (role === "PATIENT") {
       router.replace("/bot");
     } else if (role === "DOCTOR") {
@@ -28,21 +29,15 @@ export default function RedirectHandler() {
       } else if (!isApproved) {
         router.replace("/pending");
       } else {
-        router.replace("/dashboard");
+        router.replace("/dashboard/doctor");
       }
     } else {
-      // Fallback for any edge cases
       router.replace("/auth/login");
     }
+
+    // Once router kicks in, show loader until redirect completes
+    setRedirecting(true);
   }, [session, status, router]);
 
-  // Show loading spinner while redirecting
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Redirecting...</p>
-      </div>
-    </div>
-  );
+  return <LogoSpinnerOverlay active={redirecting || status === "loading"} />;
 }

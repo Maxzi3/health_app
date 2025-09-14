@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ArrowLeft, User } from "lucide-react";
+import { ArrowLeft, Loader2, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -242,7 +242,7 @@ export default function CompleteProfilePage() {
             >
               {isLoading ? (
                 <>
-                  <div className="loading-pulse w-4 h-4 rounded mr-2"></div>
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Saving...
                 </>
               ) : (

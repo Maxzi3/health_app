@@ -43,8 +43,8 @@ const HeroSection = () => {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in">
             <Button
-              variant="hero"
-              size="xl"
+              variant="default"
+              size="lg"
               className="group shadow-lg"
               onClick={() => router.push("/bot")}
             >
@@ -53,8 +53,8 @@ const HeroSection = () => {
             </Button>
 
             <Button
-              variant="outline-hero"
-              size="xl"
+              variant="outline"
+              size="lg" 
               className="shadow-lg border-white/50 text-primary hover:bg-white/10"
               onClick={() => router.push("/auth/login")}
             >
