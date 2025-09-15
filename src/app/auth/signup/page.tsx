@@ -107,23 +107,9 @@ export default function SignupPage() {
     }
   };
 
-  const handleOtpVerified = async () => {
-    try {
-      const signInResult = await signIn("credentials", {
-        email: getValues("email"),
-        password: getValues("password"),
-        redirect: false,
-      });
-
-      if (signInResult?.error) {
-        throw new Error("Login failed after signup");
-      }
-
-      toast.success("Email verified successfully!");
-      router.push("/auth/redirect-handler");
-    } catch (err: any) {
-      toast.error(err.message || "Login failed after signup");
-    }
+  const handleOtpVerified = () => {
+    toast.success("Your email has been verified Please log in to continue");
+    router.replace("/auth/login");
   };
 
   if (step === "role") {

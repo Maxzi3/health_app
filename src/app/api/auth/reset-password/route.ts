@@ -1,32 +1,52 @@
-import { NextApiRequest, NextApiResponse } from "next";
-import {User }from "@/models/User";
-import { hashToken } from "@/lib/token";
+import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/mongodb";
+import User from "@/models/User";
+import { hashToken } from "@/lib/token"; 
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
+export async function POST(req: Request) {
+  try {
+    const { token, id, newPassword } = await req.json();
 
-  await connectDB();
+    if (!token || !id || !newPassword) {
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    }
 
-  const { token, id, password } = req.body;
-  if (!token || !id || !password) return res.status(400).json({ error: "Invalid request" });
+    await connectDB();
 
-  const hashedToken = hashToken(token);
-  const user = await User.findOne({
-    _id: id,
-    resetPasswordToken: hashedToken,
-    resetPasswordExpire: { $gt: Date.now() },
-  });
+    
+    const hashedToken = hashToken(token);
 
-  if (!user) return res.status(400).json({ error: "Invalid or expired token" });
+    //  Lookup user with both ID + token
+    const user = await User.findOne({
+      _id: id,
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: new Date() },
+    });
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-  user.password = hashedPassword;
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpires = undefined;
+    if (!user) {
+      return NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 400 }
+      );
+    }
 
-  await user.save();
+    // ✅ Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
 
-  res.status(200).json({ message: "Password reset successful" });
+    // ✅ Clear reset fields
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    return NextResponse.json({ message: "Password reset successful" });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    return NextResponse.json(
+      { error: "Something went wrong" },
+      { status: 500 }
+    );
+  }
 }

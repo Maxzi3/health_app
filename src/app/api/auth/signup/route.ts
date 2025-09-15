@@ -1,10 +1,9 @@
 import { connectDB } from "@/lib/mongodb";
-import  User  from "@/models/User";
+import User from "@/models/User";
 import { sendOtpEmail } from "@/lib/email";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { generateOTP } from "@/lib/otp";
-
 
 export async function POST(request: Request) {
   try {
@@ -62,7 +61,7 @@ export async function POST(request: Request) {
     await user.save();
 
     // Send OTP email
-    // await sendOtpEmail(email, otp, name);
+    sendOtpEmail(email, name, otp);
 
     return NextResponse.json(
       { message: "User created successfully. Please verify your email." },

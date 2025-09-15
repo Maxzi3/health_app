@@ -50,6 +50,7 @@ export default function LoginPage() {
     },
   });
 
+  // Always redirect here after login
   const callbackUrl =
     searchParams.get("callbackUrl") || "/auth/redirect-handler";
 
@@ -59,7 +60,7 @@ export default function LoginPage() {
       const result = await signIn("credentials", {
         email: data.email,
         password: data.password,
-        redirect: false,
+        redirect: false, 
       });
 
       if (result?.error) {
@@ -71,18 +72,7 @@ export default function LoginPage() {
           toast.error(result.error || "Invalid email or password.");
         }
       } else {
-        const session = await getSession();
-        if (session?.user.role === "DOCTOR") {
-          if (session.user.needsProfileCompletion) {
-            router.push("/auth/complete-profile");
-          } else if (!session.user.isApproved) {
-            router.push("/pending");
-          } else {
-            router.push("/dashboard/doctor");
-          }
-        } else {
-          router.push("/bot");
-        }
+        router.push(callbackUrl);
       }
     } catch (err: any) {
       toast.error("An unexpected error occurred.");
@@ -94,13 +84,13 @@ export default function LoginPage() {
   const handleGoogleSignIn = async (role: "PATIENT" | "DOCTOR") => {
     setGoogleLoading(role);
     document.cookie = `intended-role=${role}; path=/; max-age=3600`;
-    await signIn("google", { callbackUrl });
-    setGoogleLoading(null); 
+    await signIn("google", { callbackUrl }); 
+    setGoogleLoading(null);
   };
 
   const onBack = () => router.push("/");
   const onSwitchToSignUp = () => router.push("/auth/signup");
-  const onSwitchToforgetPassword = () => router.push("/auth/forgot-password");
+  const onSwitchToForgetPassword = () => router.push("/auth/forgot-password");
 
   if (step === "otp" && otpEmail) {
     return (
@@ -236,7 +226,7 @@ export default function LoginPage() {
             <div className="flex justify-end">
               <button
                 type="button"
-                onClick={onSwitchToforgetPassword}
+                onClick={onSwitchToForgetPassword}
                 className="text-sm text-primary hover:text-primary/80 focus-visible-ring"
               >
                 Forgot your password?

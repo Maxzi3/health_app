@@ -1,6 +1,6 @@
 const brandHeader = `
   <div style="background:#2563eb;padding:16px;text-align:center;">
-    <img src="/images/Logo-Light.png" alt="Medify" style="height:40px;">
+       <img src="cid:medify-logo" alt="Medify" style="height:40px;">
   </div>
 `;
 
@@ -31,7 +31,7 @@ export function passwordResetTemplate(name: string, resetLink: string) {
     ${brandHeader}
     <div style="font-family: Inter, Arial, sans-serif; max-width:600px; margin:0 auto; padding:24px;">
       <h2 style="color:#0f172a;">Hi ${name || "there"},</h2>
-      <p>We received a request to reset your Medify password. Click the button below to reset it. This link will expire in 1 hour.</p>
+      <p>We received a request to reset your Medify password. Click the button below to reset it. This link will expire in 15 Minutes.</p>
       <a href="${resetLink}" style="display:inline-block;margin-top:12px;padding:12px 18px;border-radius:6px;background:#2563eb;color:#fff;text-decoration:none;">
         Reset Password
       </a>
@@ -71,4 +71,3 @@ export function emailVerifiedTemplate(name?: string) {
     ${brandFooter}
   `;
 }
-

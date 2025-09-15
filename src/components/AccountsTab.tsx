@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-hot-toast";
 import { Loader2 } from "lucide-react";
+import { signOut } from "next-auth/react";
 
 import {
   doctorProfileSchema,
@@ -25,6 +26,7 @@ import { useAuthUser } from "@/store/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import z from "zod";
 import { formatDate } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 type PasswordUpdate = z.infer<typeof passwordUpdateSchema>;
 
@@ -46,6 +48,7 @@ export default function AccountTab({
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("profile");
+   const router = useRouter();
 
   const doctorForm = useForm<DoctorProfile>({
     resolver: zodResolver(doctorProfileSchema),
@@ -145,6 +148,7 @@ export default function AccountTab({
     }
   };
 
+
   const onSubmitPassword = async (data: PasswordUpdate) => {
     setPasswordLoading(true);
     try {
@@ -157,19 +161,28 @@ export default function AccountTab({
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Password update failed");
 
-      toast.success("Password updated");
+      toast.success("Password updated. Please log in again.");
+
+      // Log user out
+      await signOut({ redirect: false }); // we can redirect manually
+
+      // Reset the form
       passwordForm.reset({
         email: user?.email || "",
         oldPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
+
+      // Redirect to login page
+      router.push("/auth/login");
     } catch (err: any) {
       toast.error(err.message || "Something went wrong");
     } finally {
       setPasswordLoading(false);
     }
   };
+
 
   if (fetchLoading) {
     return (

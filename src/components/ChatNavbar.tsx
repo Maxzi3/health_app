@@ -52,7 +52,7 @@ const ChatNavbar = () => {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      setLoading(false);
+      // setLoading(false);
       setOpenLogout(false);
     }
   };
@@ -77,11 +77,10 @@ const ChatNavbar = () => {
     } catch (error) {
       console.error("Delete account error:", error);
     } finally {
-      setLoading(false);
       setOpenDelete(false);
+      // setLoading(false);
     }
   };
-
 
   const handleOpenDashboard = () => {
     if (user) {

@@ -54,7 +54,6 @@ export async function POST(request: Request) {
     const updatedUser = await user.save();
 
     // Uncomment when ready to test email
-    /*
     const attachments = cvFile
       ? [{ filename: cvFile.name, content: Buffer.from(await cvFile.arrayBuffer()) }]
       : [];
@@ -64,7 +63,7 @@ export async function POST(request: Request) {
       specialization,
       attachments,
     });
-    */
+    
 
     return NextResponse.json(
       { message: "Profile completed successfully" },

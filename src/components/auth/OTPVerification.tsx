@@ -71,33 +71,30 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
     }
   };
 
-  const onSubmit = async (values: OTPFormValues) => {
-    if (!email) {
-      setError("otp", { message: "No email provided" });
-      return;
-    }
-    setIsLoading(true);
+ const onSubmit = async (data: OTPFormValues) => {
+   setIsLoading(true);
+   try {
+     const response = await fetch("/api/auth/verify-otp", {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify({ ...data, email }),
+     });
 
-    try {
-      const res = await fetch("/api/auth/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp: values.otp }),
-      });
+     const result = await response.json();
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Invalid verification code");
-
-      toast.success(data.message || "Email verified successfully!");
-      reset();
-      setTimeout(onVerified, 2000);
-    } catch (err: any) {
-      toast.error(err.message || "Invalid code. Try again.");
-      inputRefs.current[5]?.focus();
-    } finally {
-      setIsLoading(false);
-    }
-  };
+     if (!response.ok) {
+       toast.error(result.error || "OTP verification failed");
+       return;
+     }
+     reset();
+     onVerified();
+   } catch (error) {
+     console.error(error);
+     toast.error("An error occurred while verifying OTP");
+   } finally {
+     setIsLoading(false);
+   }
+ };
 
   const handleResendOTP = async () => {
     if (isResending || !email) return;

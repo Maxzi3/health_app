@@ -8,30 +8,51 @@ import {
   emailVerifiedTemplate,
 } from "./templates";
 
-// Create a single reusable transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 587),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+// Create transporter depending on environment
+const transporter = nodemailer.createTransport(
+  process.env.NODE_ENV === "production"
+    ? {
+        // Gmail SMTP for production
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true,
+        auth: {
+          user: process.env.SMTP_USER, 
+          pass: process.env.SMTP_PASS, 
+        },
+      }
+    : {
+        // Mailtrap for development
+        host: process.env.MAILTRAP_HOST,
+        port: Number(process.env.MAILTRAP_PORT || 587),
+        auth: {
+          user: process.env.MAILTRAP_USER,
+          pass: process.env.MAILTRAP_PASS,
+        },
+      }
+);
+
 
 // General email sender
 async function sendEmail(
   to: string,
   subject: string,
   html: string,
-   attachments?: Attachment[],// Optional attachments for emails like CVs or documents
+  attachments?: Attachment[]
 ) {
   return transporter.sendMail({
-    from: `"Medify" <${process.env.SMTP_USER}>`,
+    from: `"Medify" <${process.env.FROM_EMAIL}>`, // e.g. your Gmail
     to,
     subject,
     html,
-    attachments,
+    attachments: [
+      {
+        filename: "Logo-Light.png",
+        path: "public/images/Logo-Dark.png", 
+        cid: "medify-logo", 
+      },
+      ...(attachments || []),
+    ],
   });
 }
 
@@ -62,7 +83,7 @@ export async function notifyAdminDoctorSignup(details: {
   name: string;
   email: string;
   specialization?: string;
-  attachments?: Attachment[]; // Optional attachments for CV or documents
+  attachments?: Attachment[];
 }) {
   return sendEmail(
     process.env.ADMIN_EMAIL!,
@@ -72,7 +93,7 @@ export async function notifyAdminDoctorSignup(details: {
   );
 }
 
-
+// Email Verified
 export async function sendEmailVerified(to: string, name?: string) {
   return sendEmail(to, "Medify: Email Verified", emailVerifiedTemplate(name));
 }
