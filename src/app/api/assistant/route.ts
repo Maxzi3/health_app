@@ -4,7 +4,7 @@ import { illnessToSpecialty } from "@/lib/specialtyMap";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-// ✅ Mock doctors database (replace with real DB later)
+// ✅ Mock doctors database (replace later with real doctors collection)
 const mockDoctors = [
   {
     id: 1,
@@ -78,51 +78,37 @@ const mockDoctors = [
   },
 ];
 
-// ✅ Enhanced doctor matching with multiple symptom support
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function matchDoctors(symptoms: string[]): any[] {
+// ✅ Doctor matching
+function matchDoctors(symptoms: string[]) {
   const specialtiesNeeded = new Set<string>();
-
-  // Check each symptom against our mapping
   symptoms.forEach((symptom) => {
-    const normalizedSymptom = symptom.toLowerCase().trim();
-
-    // Direct match
-    if (illnessToSpecialty[normalizedSymptom]) {
-      illnessToSpecialty[normalizedSymptom].forEach((spec) =>
+    const normalized = symptom.toLowerCase().trim();
+    if (illnessToSpecialty[normalized]) {
+      illnessToSpecialty[normalized].forEach((spec) =>
         specialtiesNeeded.add(spec)
       );
     }
-
-    // Partial match (check if any key is contained in the symptom)
     Object.keys(illnessToSpecialty).forEach((key) => {
-      if (normalizedSymptom.includes(key) || key.includes(normalizedSymptom)) {
+      if (normalized.includes(key) || key.includes(normalized)) {
         illnessToSpecialty[key].forEach((spec) => specialtiesNeeded.add(spec));
       }
     });
   });
 
-  // If no matches found, add general practitioner
-  if (specialtiesNeeded.size === 0) {
+  if (specialtiesNeeded.size === 0)
     specialtiesNeeded.add("General Practitioner");
-  }
 
-  // Filter doctors based on specialties
-  const matchedDoctors = mockDoctors.filter((doc) =>
-    specialtiesNeeded.has(doc.specialty)
-  );
-
-  // Sort by rating
-  return matchedDoctors.sort((a, b) => b.rating - a.rating).slice(0, 3);
+  return mockDoctors
+    .filter((doc) => specialtiesNeeded.has(doc.specialty))
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 3);
 }
 
-// ✅ Extract symptoms from user message
+// ✅ Fallback symptom extractor
 function extractSymptoms(message: string): string[] {
   const symptoms: string[] = [];
-  const lowerMessage = message.toLowerCase();
-
-  // Common symptom keywords to look for
-  const symptomKeywords = [
+  const lower = message.toLowerCase();
+  const keywords = [
     "headache",
     "dizziness",
     "fever",
@@ -147,14 +133,9 @@ function extractSymptoms(message: string): string[] {
     "insomnia",
     "swelling",
   ];
-
-  // Check for each keyword in the message
-  symptomKeywords.forEach((keyword) => {
-    if (lowerMessage.includes(keyword)) {
-      symptoms.push(keyword);
-    }
+  keywords.forEach((kw) => {
+    if (lower.includes(kw)) symptoms.push(kw);
   });
-
   return symptoms;
 }
 
@@ -163,32 +144,26 @@ export async function POST(req: Request) {
     const { message, isAuthenticated } = await req.json();
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    // ✅ Enhanced prompt for better symptom extraction
     const prompt = `
-You are a medical assistant AI. Analyze the following user message about their health concerns.
+You are a medical assistant AI. Analyze the following user message:
 
-User message: "${message}"
+"${message}"
 
-Provide a helpful response in markdown format with:
-1. **Possible Causes** - List potential conditions
-2. **Recommended Actions** - What they should do immediately
-3. **When to See a Doctor** - Urgency level
-4. **Type of Specialist Needed** - Which doctor to consult
+Respond with:
+1. **Possible Causes**
+2. **Recommended Actions**
+3. **When to See a Doctor**
+4. **Type of Specialist Needed**
 
-Keep the response concise and helpful.
-
-After your medical advice, on a new line, provide a JSON object with extracted symptoms:
-{"symptoms": ["symptom1", "symptom2", ...]}
-
-End with this disclaimer:
-> ⚠️ **Disclaimer:** This is for informational purposes only. Consult a healthcare provider for proper diagnosis and treatment.
-`;
+Then output JSON: {"symptoms": ["symptom1", "symptom2"]}
+End with:
+> ⚠️ **Disclaimer:** This is for informational purposes only.
+    `;
 
     const result = await model.generateContent(prompt);
     let responseText = result.response.text();
 
-    // ✅ Extract symptoms from Gemini's response
+    // ✅ Extract JSON with symptoms
     let extractedSymptoms: string[] = [];
     const jsonMatch = responseText.match(
       /\{[\s\S]*"symptoms":\s*\[[\s\S]*\][\s\S]*\}/
@@ -198,28 +173,22 @@ End with this disclaimer:
       try {
         const parsed = JSON.parse(jsonMatch[0]);
         extractedSymptoms = parsed.symptoms || [];
-        // Remove JSON from the display text
         responseText = responseText.replace(jsonMatch[0], "").trim();
       } catch (e) {
         console.error("Failed to parse symptoms JSON:", e);
       }
     }
-
-    // ✅ If Gemini didn't extract symptoms, try to extract from user message
     if (extractedSymptoms.length === 0) {
       extractedSymptoms = extractSymptoms(message);
     }
 
-    // ✅ Match doctors based on symptoms (only if authenticated)
+    // ✅ Doctor recommendations (only if logged in)
     const doctors = isAuthenticated ? matchDoctors(extractedSymptoms) : [];
-
-    console.log("Extracted symptoms:", extractedSymptoms);
-    console.log("Matched doctors:", doctors);
 
     return NextResponse.json({
       text: responseText,
-      doctors: doctors, // Send matched doctors
-      symptoms: extractedSymptoms, // For debugging
+      doctors,
+      symptoms: extractedSymptoms,
     });
   } catch (error) {
     console.error("Error in assistant API:", error);

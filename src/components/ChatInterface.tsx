@@ -1,114 +1,165 @@
 "use client";
-import { useState, ReactNode } from "react";
+import React, { useEffect, useRef, useState, ReactNode } from "react";
 import { Send, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import ChatNavbar from "./ChatNavbar";
-import ReactMarkdown from "react-markdown";
-import React from "react";
+import MessageItem from "./MessageItem";
 import { useSession } from "next-auth/react";
-
-const useAuth = () => {
-  const { data: session, status } = useSession();
-  return {
-    isAuthenticated: !!session,
-    user: session?.user || null,
-    status,
-  };
-};
-
-interface Doctor {
-  id: number;
-  name: string;
-  specialty: string;
-  rating: number;
-  experience: string;
-}
-
-interface Message {
-  id: number;
-  text: string;
-  sender: "user" | "bot";
-  timestamp: Date;
-  doctors?: Doctor[];
-}
+import { v4 as uuidv4 } from "uuid";
+import { Message, Doctor } from "@/types/chat";
 
 interface ApiResponse {
   text: string;
   doctors?: Doctor[];
   error?: string;
 }
-
-
-    
-
+const initialBotMessage: Message = {
+  id: uuidv4(),
+  text: "Hello! I'm your healthcare assistant. Tell me about your health concern and I'll help you find the right doctor or provide guidance.",
+  sender: "BOT",
+  timestamp: new Date(),
+};
 export default function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      text: "Hello! I'm your healthcare assistant. Tell me about your health concern and I'll help you find the right doctor or provide guidance.",
-      sender: "bot",
-      timestamp: new Date(),
-    },
-  ]);
+  const { data: session, status } = useSession();
+  const [messages, setMessages] = useState<Message[]>([initialBotMessage]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { isAuthenticated } = useAuth();
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (status !== "authenticated" || !conversationId) return;
+    const loadMessages = async () => {
+      try {
+        setIsLoading(true);
+        const res = await fetch(`/api/conversation/${conversationId}`);
+        if (!res.ok) throw new Error(`Failed to fetch messages: ${res.status}`);
+        const data = await res.json();
+        // Always include the initial bot message, followed by fetched messages
+        if (data.messages?.length > 0) {
+          // Avoid duplicating initial message if it exists in fetched messages
+          const hasInitialMessage = data.messages.some(
+            (msg: Message) =>
+              msg.text === initialBotMessage.text && msg.sender === "BOT"
+          );
+          setMessages(
+            hasInitialMessage
+              ? data.messages
+              : [initialBotMessage, ...data.messages]
+          );
+        } else {
+          setMessages([initialBotMessage]); // Keep initial message if no messages fetched
+        }
+      } catch (error) {
+        console.error("Error loading messages:", error);
+        setError("Failed to load chat history.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadMessages();
+  }, [conversationId, status]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  useEffect(() => {
+    const initConversation = async () => {
+      if (session?.user?.id) {
+        const res = await fetch("/api/conversation/init", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ patientId: session.user.id }),
+        });
+        const data = await res.json();
+        setConversationId(data.conversationId);
+      } else {
+        setConversationId(null);
+      }
+    };
+    initConversation();
+  }, [session?.user?.id]);
+
+  const saveMessage = async (
+    conversationId: string,
+    sender: "USER" | "BOT",
+    text: string
+  ) => {
+    if (!session?.user) return;
+    try {
+      await fetch("/api/conversation/save-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId, sender, text }),
+      });
+    } catch (err) {
+      console.error("Error saving message:", err);
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
     const userMessage: Message = {
-      id: messages.length + 1,
+      id: uuidv4(),
       text: inputValue,
-      sender: "user",
+      sender: "USER",
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentMessage = inputValue;
     setInputValue("");
     setIsLoading(true);
     setError(null);
+
+    if (session?.user && conversationId) {
+      await saveMessage(conversationId, "USER", currentMessage);
+    }
 
     try {
       const res = await fetch("/api/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: inputValue,
-          isAuthenticated,
+          message: currentMessage,
+          conversationId: session?.user ? conversationId : null,
+          patientId: session?.user?.id || null,
+          isAuthenticated: !!session?.user,
         }),
       });
 
-      if (!res.ok) {
-        const apiError: ApiResponse = await res.json();
-        throw new Error(apiError.error || "API request failed");
+      const data: ApiResponse & { conversationId?: string } = await res.json();
+      if (!res.ok) throw new Error(data.error || "Something went wrong");
+
+      if (data.conversationId && data.conversationId !== conversationId) {
+        setConversationId(data.conversationId);
       }
 
-      const data: ApiResponse = await res.json();
-
-      const botResponse: Message = {
-        id: messages.length + 2,
+      const botMessage: Message = {
+        id: uuidv4(),
         text: data.text,
-        sender: "bot",
+        sender: "BOT",
         timestamp: new Date(),
         doctors: data.doctors || [],
       };
 
-      setMessages((prev) => [...prev, botResponse]);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+      setMessages((prev) => [...prev, botMessage]);
+
+      if (session?.user && conversationId) {
+        await saveMessage(conversationId, "BOT", data.text);
+      }
+    } catch (err) {
       console.error(err);
       setError("Failed to get a response. Please try again.");
       const errorMessage: Message = {
-        id: messages.length + 2,
+        id: uuidv4(),
         text: "Sorry, I encountered an error. Please try again.",
-        sender: "bot",
+        sender: "BOT",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -123,30 +174,28 @@ export default function ChatInterface() {
     }
   };
 
-  const LoadingSkeleton: ReactNode = (
-    <div className="flex justify-start animate-fade-in">
-      <div className="chat-message-bot mr-12">
-        <Skeleton className="h-12 w-[60%] mb-2" />
-        <Skeleton className="h-4 w-20" />
-      </div>
-    </div>
-  );
+ const LoadingSkeleton: ReactNode = (
+   <div className="flex justify-start animate-pulse mb-4">
+     <div className="bg-gray-200 rounded-2xl px-4 py-3 w-[60%] mr-12 shadow-sm">
+       <div className="h-6 bg-gray-300 rounded w-3/4 mb-2"></div>
+       <div className="h-4 bg-gray-300 rounded w-1/4"></div>
+     </div>
+   </div>
+ );
 
   return (
     <div className="h-screen flex flex-col bg-gradient-soft">
       <ChatNavbar />
-
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <MessageItem
             key={message.id}
             message={message}
-            isAuthenticated={isAuthenticated}
+            isAuthenticated={!!session?.user}
+            conversationId={session?.user ? conversationId || "" : ""}
           />
         ))}
-
         {isLoading && LoadingSkeleton}
-
         {error && (
           <div className="flex justify-center">
             <div className="text-red-500 text-sm p-4 bg-red-50 rounded-lg max-w-[80%] text-center">
@@ -154,8 +203,8 @@ export default function ChatInterface() {
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
-
       <div className="p-4 border-t bg-card">
         <div className="flex items-center space-x-2">
           <Button

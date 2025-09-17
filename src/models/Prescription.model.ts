@@ -5,30 +5,26 @@ export interface IPrescription extends Document {
   doctorId: Types.ObjectId;
   symptoms: string;
   botResponse: string;
-  prescriptionText?: string; // Doctor adds prescription here
-  status: "PENDING" | "SENT" | "COMPLETED";
+  status: "PENDING" | "APPROVED" | "REJECTED";
   createdAt?: Date;
   updatedAt?: Date;
 }
 
+
 const PrescriptionSchema: Schema<IPrescription> = new Schema(
   {
     patientId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    doctorId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    doctorId: { type: Schema.Types.ObjectId, ref: "Doctor", required: true },
     symptoms: { type: String, required: true },
     botResponse: { type: String, required: true },
-    prescriptionText: { type: String },
     status: {
       type: String,
-      enum: ["PENDING", "SENT", "COMPLETED"],
+      enum: ["PENDING", "APPROVED", "REJECTED"],
       default: "PENDING",
     },
   },
   { timestamps: true }
 );
 
-delete mongoose.models.Prescription;
-export default mongoose.model<IPrescription>(
-  "Prescription",
-  PrescriptionSchema
-);
+export default mongoose.models.Prescription ||
+  mongoose.model<IPrescription>("Prescription", PrescriptionSchema);
