@@ -130,28 +130,32 @@ export default function CompleteProfilePage() {
                 }`}
               >
                 <option value="">Select your specialization</option>
-                {[
-                  "General Practice",
-                  "Cardiology",
-                  "Dermatology",
-                  "Endocrinology",
-                  "Gastroenterology",
-                  "Neurology",
-                  "Oncology",
-                  "Orthopedics",
-                  "Pediatrics",
-                  "Psychiatry",
-                  "Pulmonology",
-                  "Radiology",
-                  "Surgery",
-                  "Urology",
-                  "Other",
-                ].map((spec) => (
-                  <option key={spec} value={spec}>
-                    {spec}
-                  </option>
-                ))}
+                <option value="General Practitioner">
+                  General Practitioner
+                </option>
+                <option value="Cardiologist">Cardiologist</option>
+                <option value="Dermatologist">Dermatologist</option>
+                <option value="Endocrinologist">Endocrinologist</option>
+                <option value="Gastroenterologist">Gastroenterologist</option>
+                <option value="Neurologist">Neurologist</option>
+                <option value="Oncologist">Oncologist</option>
+                <option value="Orthopedist">Orthopedist</option>
+                <option value="Pediatrician">Pediatrician</option>
+                <option value="Psychiatrist">Psychiatrist</option>
+                <option value="Psychologist">Psychologist</option>
+                <option value="Pulmonologist">Pulmonologist</option>
+                <option value="Radiologist">Radiologist</option>
+                <option value="Surgeon">Surgeon</option>
+                <option value="Urologist">Urologist</option>
+                <option value="Allergist">Allergist</option>
+                <option value="Infectious Disease Specialist">
+                  Infectious Disease Specialist
+                </option>
+                <option value="Internal Medicine">Internal Medicine</option>
+                <option value="Emergency Medicine">Emergency Medicine</option>
+                <option value="Other">Other</option>
               </select>
+
               {errors.specialization && (
                 <p className="text-sm text-destructive">
                   {errors.specialization.message}

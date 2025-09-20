@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
-import { hashToken } from "@/lib/token"; 
+import { hashToken } from "@/lib/token";
 
 export async function POST(req: Request) {
   try {
@@ -14,7 +14,6 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    
     const hashedToken = hashToken(token);
 
     //  Lookup user with both ID + token
@@ -31,11 +30,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Hash new password
+    //  Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedPassword;
 
-    // ✅ Clear reset fields
+    //  Clear reset fields
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
 

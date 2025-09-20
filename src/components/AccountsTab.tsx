@@ -48,7 +48,7 @@ export default function AccountTab({
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("profile");
-   const router = useRouter();
+  const router = useRouter();
 
   const doctorForm = useForm<DoctorProfile>({
     resolver: zodResolver(doctorProfileSchema),
@@ -148,7 +148,6 @@ export default function AccountTab({
     }
   };
 
-
   const onSubmitPassword = async (data: PasswordUpdate) => {
     setPasswordLoading(true);
     try {
@@ -182,7 +181,6 @@ export default function AccountTab({
       setPasswordLoading(false);
     }
   };
-
 
   if (fetchLoading) {
     return (
@@ -226,8 +224,44 @@ export default function AccountTab({
                   </div>
                   <div>
                     <Label>Specialization</Label>
-                    <Input {...doctorForm.register("specialization")} />
+                    <select
+                      {...doctorForm.register("specialization")}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">Select your specialization</option>
+                      <option value="General Practitioner">
+                        General Practitioner
+                      </option>
+                      <option value="Cardiologist">Cardiologist</option>
+                      <option value="Dermatologist">Dermatologist</option>
+                      <option value="Endocrinologist">Endocrinologist</option>
+                      <option value="Gastroenterologist">
+                        Gastroenterologist
+                      </option>
+                      <option value="Neurologist">Neurologist</option>
+                      <option value="Oncologist">Oncologist</option>
+                      <option value="Orthopedist">Orthopedist</option>
+                      <option value="Pediatrician">Pediatrician</option>
+                      <option value="Psychiatrist">Psychiatrist</option>
+                      <option value="Psychologist">Psychologist</option>
+                      <option value="Pulmonologist">Pulmonologist</option>
+                      <option value="Radiologist">Radiologist</option>
+                      <option value="Surgeon">Surgeon</option>
+                      <option value="Urologist">Urologist</option>
+                      <option value="Allergist">Allergist</option>
+                      <option value="Infectious Disease Specialist">
+                        Infectious Disease Specialist
+                      </option>
+                      <option value="Internal Medicine">
+                        Internal Medicine
+                      </option>
+                      <option value="Emergency Medicine">
+                        Emergency Medicine
+                      </option>
+                      <option value="Other">Other</option>
+                    </select>
                   </div>
+
                   <div>
                     <Label>Experience</Label>
                     <Input

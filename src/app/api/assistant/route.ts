@@ -1,93 +1,24 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { illnessToSpecialty } from "@/lib/specialtyMap";
+import { connectDB } from "@/lib/mongodb";
+import User from "@/models/User";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-// ✅ Mock doctors database (replace later with real doctors collection)
-const mockDoctors = [
-  {
-    id: 1,
-    name: "Dr. Jane Doe",
-    specialty: "Neurologist",
-    rating: 4.9,
-    experience: "8 years",
-  },
-  {
-    id: 2,
-    name: "Dr. Smith John",
-    specialty: "General Practitioner",
-    rating: 4.7,
-    experience: "12 years",
-  },
-  {
-    id: 3,
-    name: "Dr. Rose Lee",
-    specialty: "Psychologist",
-    rating: 4.8,
-    experience: "6 years",
-  },
-  {
-    id: 4,
-    name: "Dr. Fatima Musa",
-    specialty: "Dermatologist",
-    rating: 4.6,
-    experience: "9 years",
-  },
-  {
-    id: 5,
-    name: "Dr. Ahmed Hassan",
-    specialty: "Cardiologist",
-    rating: 4.9,
-    experience: "15 years",
-  },
-  {
-    id: 6,
-    name: "Dr. Sarah Chen",
-    specialty: "ENT Specialist",
-    rating: 4.7,
-    experience: "10 years",
-  },
-  {
-    id: 7,
-    name: "Dr. Michael Brown",
-    specialty: "Gastroenterologist",
-    rating: 4.8,
-    experience: "11 years",
-  },
-  {
-    id: 8,
-    name: "Dr. Emily White",
-    specialty: "Psychiatrist",
-    rating: 4.9,
-    experience: "7 years",
-  },
-  {
-    id: 9,
-    name: "Dr. David Kim",
-    specialty: "Pulmonologist",
-    rating: 4.6,
-    experience: "9 years",
-  },
-  {
-    id: 10,
-    name: "Dr. Lisa Johnson",
-    specialty: "Internal Medicine",
-    rating: 4.8,
-    experience: "13 years",
-  },
-];
-
-// ✅ Doctor matching
-function matchDoctors(symptoms: string[]) {
+//  Doctor matching from DB
+async function matchDoctors(symptoms: string[]) {
   const specialtiesNeeded = new Set<string>();
+
   symptoms.forEach((symptom) => {
     const normalized = symptom.toLowerCase().trim();
+
     if (illnessToSpecialty[normalized]) {
       illnessToSpecialty[normalized].forEach((spec) =>
         specialtiesNeeded.add(spec)
       );
     }
+
     Object.keys(illnessToSpecialty).forEach((key) => {
       if (normalized.includes(key) || key.includes(normalized)) {
         illnessToSpecialty[key].forEach((spec) => specialtiesNeeded.add(spec));
@@ -98,13 +29,27 @@ function matchDoctors(symptoms: string[]) {
   if (specialtiesNeeded.size === 0)
     specialtiesNeeded.add("General Practitioner");
 
-  return mockDoctors
-    .filter((doc) => specialtiesNeeded.has(doc.specialty))
-    .sort((a, b) => b.rating - a.rating)
+  //  Fetch real doctors from DB
+  await connectDB();
+  const doctors = await User.find({
+    role: "DOCTOR",
+    specialization: { $in: Array.from(specialtiesNeeded) },
+  })
+    .select("name specialization experience")
+    .limit(10);
+
+  // ⚡ Return doctors with proper _id field
+  return doctors
+    .map((doc) => ({
+      _id: doc._id.toString(),
+      name: doc.name,
+      specialty: doc.specialization,
+      experience: doc.experience || "5 years",
+    }))
     .slice(0, 3);
 }
 
-// ✅ Fallback symptom extractor
+//  Fallback symptom extractor
 function extractSymptoms(message: string): string[] {
   const symptoms: string[] = [];
   const lower = message.toLowerCase();
@@ -132,6 +77,7 @@ function extractSymptoms(message: string): string[] {
     "palpitations",
     "insomnia",
     "swelling",
+    "purging", // Add this for your specific case
   ];
   keywords.forEach((kw) => {
     if (lower.includes(kw)) symptoms.push(kw);
@@ -141,29 +87,31 @@ function extractSymptoms(message: string): string[] {
 
 export async function POST(req: Request) {
   try {
-    const { message, isAuthenticated } = await req.json();
+    const { message, isAuthenticated, conversationId, patientId } =
+      await req.json();
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const prompt = `
-You are a medical assistant AI. Analyze the following user message:
 
-"${message}"
+const prompt = `
+You are a medical assistant AI. Your goal is to provide concise, easy-to-read medical guidance.
+Analyze the user's message: "${message}".
 
-Respond with:
-1. **Possible Causes**
-2. **Recommended Actions**
-3. **When to See a Doctor**
-4. **Type of Specialist Needed**
+Start with a brief, empathetic sentence.
+Then, respond with the following sections using bullet points and short sentences:
 
-Then output JSON: {"symptoms": ["symptom1", "symptom2"]}
-End with:
-> ⚠️ **Disclaimer:** This is for informational purposes only.
-    `;
+- **Possible Causes**: Briefly list 3-5 common and possible causes.
+- **Recommended Actions**: Provide 3-4 simple, actionable steps the user can take.
+- **When to See a Doctor**: List 2-3 key red flags that warrant a professional consultation.
+- **Specialist Needed**: Clearly state the type of doctor to consult.
+
+Then, at the very end, output a JSON object: {"symptoms": ["symptom1", "symptom2"]}
+Finally, include the disclaimer: > ⚠️ **Disclaimer:** This is for informational purposes only.
+`;
 
     const result = await model.generateContent(prompt);
     let responseText = result.response.text();
 
-    // ✅ Extract JSON with symptoms
+    //  Extract JSON with symptoms
     let extractedSymptoms: string[] = [];
     const jsonMatch = responseText.match(
       /\{[\s\S]*"symptoms":\s*\[[\s\S]*\][\s\S]*\}/
@@ -178,17 +126,24 @@ End with:
         console.error("Failed to parse symptoms JSON:", e);
       }
     }
+
     if (extractedSymptoms.length === 0) {
       extractedSymptoms = extractSymptoms(message);
     }
 
-    // ✅ Doctor recommendations (only if logged in)
-    const doctors = isAuthenticated ? matchDoctors(extractedSymptoms) : [];
+    //  Doctor recommendations (only if logged in)
+    const doctors = isAuthenticated
+      ? await matchDoctors(extractedSymptoms)
+      : [];
+
+    //  Remove the duplicate message saving - ChatInterface already handles this
+    // The prescription/appointment routes should use the original user message, not bot response
 
     return NextResponse.json({
       text: responseText,
       doctors,
       symptoms: extractedSymptoms,
+      expectedDoctors: isAuthenticated,
     });
   } catch (error) {
     console.error("Error in assistant API:", error);

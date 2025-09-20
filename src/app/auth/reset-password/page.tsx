@@ -55,7 +55,7 @@ export default function ResetPasswordPage() {
   }, [token, id, router]);
 
   const onSubmit = async (data: FormData) => {
-    if (!token || !id) return; 
+    if (!token || !id) return;
 
     setLoading(true);
     setServerError(null);
@@ -78,7 +78,7 @@ export default function ResetPasswordPage() {
         return;
       }
 
-      // ✅ Success toast
+      //  Success toast
       toast.success("Password reset successful! Please log in.");
       router.push("/auth/login?reset=success");
     } catch (err) {

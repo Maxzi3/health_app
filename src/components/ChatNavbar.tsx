@@ -279,7 +279,7 @@ const ChatNavbar = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ✅ Spinner overlay */}
+      {/*  Spinner overlay */}
       <LogoSpinnerOverlay active={loading} />
     </>
   );

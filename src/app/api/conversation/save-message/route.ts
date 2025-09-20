@@ -1,36 +1,35 @@
+// Fixed api/conversation/save-message/route.ts
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Conversation from "@/models/Conversation.model";
 
-// ✅ Handle POST /api/conversation/save-message
 export async function POST(req: Request) {
   try {
-    const { conversationId, sender, text } = await req.json();
+    const { conversationId, sender, text, doctors } = await req.json(); //  Add doctors
 
-    if (!sender || !text) {
+    if (!conversationId || !sender || !text) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "conversationId, sender, and text are required" },
         { status: 400 }
       );
     }
 
-    // 🚨 If guest (no conversationId), don't save anything in DB
-    if (!conversationId) {
-      return NextResponse.json({ success: true, conversation: null });
-    }
-
     await connectDB();
 
-    // ✅ Push message into conversation
+    //  Include doctors in message data
+    const messageData = {
+      sender,
+      text,
+      timestamp: new Date(),
+      ...(doctors && doctors.length > 0 && { doctors }), // Only add if doctors exist
+    };
+
+    // Add message to conversation
     const updatedConversation = await Conversation.findByIdAndUpdate(
       conversationId,
       {
         $push: {
-          messages: {
-            sender,
-            text,
-            timestamp: new Date(),
-          },
+          messages: messageData,
         },
       },
       { new: true }
@@ -43,12 +42,16 @@ export async function POST(req: Request) {
       );
     }
 
+    // Get the newly added message
+    const newMessage =
+      updatedConversation.messages[updatedConversation.messages.length - 1];
+
     return NextResponse.json({
-      success: true,
-      conversation: updatedConversation,
+      messageId: newMessage._id?.toString(),
+      message: "Message saved successfully",
     });
-  } catch (error) {
-    console.error("Error saving message:", error);
+  } catch (err) {
+    console.error("Error saving message:", err);
     return NextResponse.json(
       { error: "Failed to save message" },
       { status: 500 }

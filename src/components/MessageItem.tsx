@@ -1,11 +1,9 @@
 "use client";
-import { useState } from "react";
+import React, { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
-import React from "react";
 import { useSession } from "next-auth/react";
 import { Calendar24 } from "@/components/ui/calendar24";
 import {
@@ -26,10 +24,12 @@ const MessageItem = React.memo(
     message,
     isAuthenticated,
     conversationId,
+    onMessageUpdate,
   }: {
     message: Message;
     isAuthenticated: boolean;
     conversationId: string;
+    onMessageUpdate: (updatedMessage: Message) => void;
   }) => {
     const { data: session } = useSession();
     const [loadingDoctorId, setLoadingDoctorId] = useState<
@@ -53,87 +53,127 @@ const MessageItem = React.memo(
       }
     };
 
+    // BOOK APPOINTMENT
+
     const handleBookAppointment = async (doctor: Doctor) => {
       if (
+        !doctor._id ||
         !session?.user?.id ||
         !conversationId ||
-        !appointmentDate ||
-        !appointmentTime ||
-        !reason.trim()
+        !message._id
       ) {
-        toast.error("Please fill in all required fields");
+        console.error("Missing IDs for appointment:", {
+          doctorId: doctor._id,
+          patientId: session?.user?.id,
+          conversationId,
+          messageId: message._id,
+        });
+        toast.error("Missing required IDs for appointment.");
         return;
       }
-      setLoadingDoctorId(doctor.id);
+
+      const formattedDate = appointmentDate
+        ? format(appointmentDate, "yyyy-MM-dd")
+        : undefined;
+
+      setLoadingDoctorId(doctor._id);
+
       try {
         const res = await fetch("/api/appointment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            doctorId: doctor._id,
             patientId: session.user.id,
-            doctorId: doctor.id,
             conversationId,
-            symptoms: message.sender === "USER" ? message.text : "",
-            botResponse: message.sender === "BOT" ? message.text : "",
-            appointmentDate: appointmentDate.toISOString().split("T")[0],
-            appointmentTime: `${appointmentTime}:00`,
-            reason,
+            messageId: message._id,
+            date: formattedDate,
+            time: appointmentTime,
+            reason: reason, //  User's reason for appointment
+            botResponse: message.text, //  Bot response for context
+            //  Remove symptoms - let backend find original user message
           }),
         });
+
         const data = await res.json();
-        if (res.ok) {
-          toast.success("Appointment Booked!");
-          setAppointmentDate(undefined);
-          setAppointmentTime("10:30");
-          setReason("");
-        } else {
+        if (!res.ok) {
+          console.error("Appointment API error:", data.error);
           throw new Error(data.error || "Failed to book appointment");
         }
-      } catch (err) {
-        console.error("Appointment booking error:", err);
-        toast.error(
-          err instanceof Error ? err.message : "Failed to book appointment"
-        );
+
+        toast.success("Appointment Booked!");
+
+        onMessageUpdate({
+          ...message,
+          appointmentId: data.appointment._id,
+          selectedDoctorId: data.selectedDoctorId,
+          botResponse: data.botResponse,
+        });
+
+        setOpenAppointmentModal(false);
+      } catch (error) {
+        console.error("Error booking appointment:", error);
+        toast.error("Failed to book appointment.");
       } finally {
         setLoadingDoctorId(null);
-        setOpenAppointmentModal(false);
-        setSelectedDoctor(null);
       }
     };
 
+    // GET PRESCRIPTION
     const handleGetPrescription = async (doctor: Doctor) => {
-      if (!session?.user?.id || !conversationId) {
-        toast.error("Please log in to request a prescription");
+      if (
+        !doctor._id ||
+        !session?.user?.id ||
+        !conversationId ||
+        !message._id
+      ) {
+        console.error("Missing IDs for prescription:", {
+          doctorId: doctor._id,
+          patientId: session?.user?.id,
+          conversationId,
+          messageId: message._id,
+        });
+        toast.error("Missing required IDs for prescription.");
         return;
       }
-      setLoadingDoctorId(doctor.id);
+
+      setLoadingDoctorId(doctor._id);
+
       try {
         const res = await fetch("/api/prescription", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            doctorId: doctor._id,
             patientId: session.user.id,
-            doctorId: String(doctor.id), // Ensure string
             conversationId,
-            symptoms: message.sender === "USER" ? message.text : "",
-            botResponse: message.sender === "BOT" ? message.text : "",
+            messageId: message._id,
+            botResponse: message.text, //  Bot response for context
+            //  Remove symptoms - let backend find original user message
           }),
         });
+
         const data = await res.json();
-        if (res.ok) {
-          toast.success("Prescription Requested!");
-        } else {
+        if (!res.ok) {
+          console.error("Prescription API error:", data.error);
           throw new Error(data.error || "Failed to request prescription");
         }
-      } catch (err) {
-        console.error("Prescription request error:", err);
-        toast.error(
-          err instanceof Error ? err.message : "Failed to request prescription"
-        );
+
+        toast.success("Prescription Requested!");
+
+        onMessageUpdate({
+          ...message,
+          prescriptionId: data.prescription._id,
+          botResponse: data.botResponse,
+          selectedDoctorId: data.selectedDoctorId,
+        });
+
+        setOpenPrescriptionModal(false);
+      } catch (error) {
+        console.error("Error requesting prescription:", error);
+        toast.error("Failed to request prescription.");
       } finally {
         setLoadingDoctorId(null);
-        setOpenPrescriptionModal(false);
-        setSelectedDoctor(null);
       }
     };
 
@@ -149,6 +189,7 @@ const MessageItem = React.memo(
 
     return (
       <div className="animate-fade-in">
+        {/* message bubble */}
         <div
           className={`flex ${
             message.sender === "USER" ? "justify-end" : "justify-start"
@@ -162,7 +203,7 @@ const MessageItem = React.memo(
             }`}
           >
             {message.sender === "BOT" ? (
-              <div className="prose prose-sm text-sm leading-relaxed">
+              <div className="text-sm leading-relaxed">
                 <ReactMarkdown>{message.text}</ReactMarkdown>
               </div>
             ) : (
@@ -179,77 +220,96 @@ const MessageItem = React.memo(
             </p>
           </div>
         </div>
-        {isAuthenticated && message.doctors !== undefined && (
-          <div className="mr-12 mt-3 animate-scale-in space-y-3">
-            {message.doctors && message.doctors.length > 0 ? (
-              message.doctors.map((doctor) => (
-                <Card
-                  key={doctor.id}
-                  className="hover:shadow-medium max-w-xl transition-all duration-300 cursor-pointer border border-border/50"
-                >
-                  <CardContent className="px-4 py-3">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-3 md:space-y-0">
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="bg-gradient-success">
-                          <AvatarFallback className="text-accent-foreground font-medium">
-                            {doctor.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-semibold text-card-foreground">
-                            {doctor.name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {doctor.specialty}
-                          </p>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <Badge variant="secondary" className="text-xs">
-                              ⭐ {doctor.rating}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {doctor.experience} exp.
-                            </span>
-                          </div>
+        {/* doctor cards */}
+        {message.doctors && message.doctors.length > 0 ? (
+          message.doctors.map((doctor) => {
+            const hasAppointmentWithThisDoctor =
+              message.appointmentId && message.selectedDoctorId === doctor._id;
+            const hasPrescriptionWithThisDoctor =
+              message.prescriptionId && message.selectedDoctorId === doctor._id;
+            return (
+              <Card
+                key={doctor._id}
+                className="hover:shadow-medium max-w-xl transition-all duration-300 cursor-pointer border border-border/50 mb-3"
+              >
+                <CardContent className="px-4 py-3">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="bg-gradient-success">
+                        <AvatarFallback className="text-accent-foreground font-medium">
+                          {doctor.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-semibold text-card-foreground">
+                          {doctor.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {doctor.specialty}
+                        </p>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-muted-foreground">
+                            {doctor.experience} years experience.
+                          </span>
                         </div>
                       </div>
-                      <div className="flex gap-2 w-full md:w-auto">
-                        <Button
-                          onClick={() => openAppointmentDialog(doctor)}
-                          variant="default"
-                          size="sm"
-                          disabled={loadingDoctorId === doctor.id}
-                          className="flex-1 md:flex-none"
-                        >
-                          {loadingDoctorId === doctor.id
-                            ? "Booking..."
-                            : "Book Appointment"}
-                        </Button>
-                        <Button
-                          onClick={() => openPrescriptionDialog(doctor)}
-                          variant="outline"
-                          size="sm"
-                          disabled={loadingDoctorId === doctor.id}
-                          className="flex-1 md:flex-none"
-                        >
-                          {loadingDoctorId === doctor.id
-                            ? "Requesting..."
-                            : "Get Prescription"}
-                        </Button>
-                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : message.sender === "BOT" ? (
-              <div className="p-3 rounded-lg border border-dashed border-border/50 text-muted-foreground text-sm bg-muted/20">
-                No relevant doctors found for your symptoms.
-              </div>
-            ) : null}
+                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                      {(() => {
+                        const isAppointmentDisabled =
+                          hasAppointmentWithThisDoctor ||
+                          (!!message.appointmentId &&
+                            !hasAppointmentWithThisDoctor) ||
+                          loadingDoctorId === doctor._id;
+                        return (
+                          <Button
+                            onClick={() => openAppointmentDialog(doctor)}
+                            variant="default"
+                            size="sm"
+                            disabled={isAppointmentDisabled}
+                            className="flex-1 md:flex-none p-2 disabled:cursor-none"
+                          >
+                            {hasAppointmentWithThisDoctor
+                              ? "Appointment Booked"
+                              : loadingDoctorId === doctor._id
+                              ? "Booking..."
+                              : "Book Appointment"}
+                          </Button>
+                        );
+                      })()}
+                      <Button
+                        onClick={() => openPrescriptionDialog(doctor)}
+                        variant="outline"
+                        size="sm"
+                        disabled={
+                          hasPrescriptionWithThisDoctor || 
+                          (!!message.prescriptionId &&
+                            !hasPrescriptionWithThisDoctor) || 
+                          loadingDoctorId === doctor._id
+                        }
+                        className="flex-1 md:flex-none p-2 disabled:cursor-none"
+                      >
+                        {hasPrescriptionWithThisDoctor
+                          ? "Prescription Requested"
+                          : loadingDoctorId === doctor._id
+                          ? "Requesting..."
+                          : "Get Prescription"}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        ) : message.sender === "BOT" && message.expectedDoctors ? (
+          <div className="p-3 rounded-lg border border-dashed border-border/50 text-muted-foreground text-sm bg-muted/20">
+            No relevant doctors found for your symptoms.
           </div>
-        )}
+        ) : null}
+        {/* dialogs */}
         <Dialog
           open={openAppointmentModal}
           onOpenChange={setOpenAppointmentModal}
@@ -294,10 +354,10 @@ const MessageItem = React.memo(
                   !appointmentTime ||
                   !reason.trim() ||
                   !selectedDoctor ||
-                  loadingDoctorId === selectedDoctor?.id
+                  loadingDoctorId === selectedDoctor?._id
                 }
               >
-                {loadingDoctorId === selectedDoctor?.id
+                {loadingDoctorId === selectedDoctor?._id
                   ? "Booking..."
                   : "Confirm Appointment"}
               </Button>
@@ -333,10 +393,10 @@ const MessageItem = React.memo(
                   selectedDoctor && handleGetPrescription(selectedDoctor)
                 }
                 disabled={
-                  !selectedDoctor || loadingDoctorId === selectedDoctor?.id
+                  !selectedDoctor || loadingDoctorId === selectedDoctor?._id
                 }
               >
-                {loadingDoctorId === selectedDoctor?.id
+                {loadingDoctorId === selectedDoctor?._id
                   ? "Requesting..."
                   : "Confirm Request"}
               </Button>

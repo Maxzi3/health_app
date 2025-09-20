@@ -1,37 +1,64 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Conversation from "@/models/Conversation.model";
-import { v4 as uuidv4 } from "uuid";
+import mongoose from "mongoose";
 
 export async function GET(
   req: Request,
-  context: { params: Promise<{ conversationId: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    await connectDB();
-    const { conversationId } = await context.params;
-    if (!conversationId) {
+    const { id } = params;
+    console.log("Fetching conversation with ID:", id);
+
+    if (!id) {
+      console.error("No conversation ID provided");
       return NextResponse.json(
         { error: "Conversation ID is required" },
         { status: 400 }
       );
     }
-    const conversation = await Conversation.findById(conversationId);
+
+    //  Use mongoose.Types.ObjectId.isValid() for proper validation
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.error("Invalid ObjectId format:", id);
+      return NextResponse.json(
+        { error: "Invalid conversation ID format" },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    const conversation = await Conversation.findById(id);
+
     if (!conversation) {
       return NextResponse.json(
         { error: "Conversation not found" },
         { status: 404 }
       );
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const messages = conversation.messages.map((msg: any) => ({
-      ...msg.toObject(),
-      id: msg._id ? msg._id.toString() : uuidv4(),
-      timestamp: new Date(msg.timestamp),
+
+    // Transform messages to ensure _id is included as string
+    const messages = conversation.messages.map((msg) => ({
+      _id: msg._id?.toString(),
+      sender: msg.sender,
+      text: msg.text,
+      timestamp: msg.timestamp,
+      appointmentId: msg.appointmentId?.toString(),
+      prescriptionId: msg.prescriptionId?.toString(),
+      doctors: msg.doctors || [], // Include doctors array
     }));
-    return NextResponse.json({ messages });
-  } catch (error) {
-    console.error("Error fetching conversation:", error);
+
+    return NextResponse.json({
+      _id: conversation._id.toString(),
+      patientId: conversation.patientId.toString(),
+      messages,
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
+    });
+  } catch (err) {
+    console.error("Error fetching conversation:", err);
     return NextResponse.json(
       { error: "Failed to fetch conversation" },
       { status: 500 }

@@ -21,11 +21,10 @@ export async function DELETE() {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    // ✅ Soft delete: mark as deleted
+    //  Soft delete: mark as deleted
     user.isDeleted = true;
     user.deletedAt = new Date();
     await user.save();
-
 
     return NextResponse.json(
       { message: "Account deleted (soft delete applied)" },
@@ -39,7 +38,6 @@ export async function DELETE() {
     );
   }
 }
-
 
 // Queries everywhere else → always filter out deleted users unless you want to include them:
 

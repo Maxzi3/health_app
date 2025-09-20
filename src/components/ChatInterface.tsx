@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React, { useEffect, useRef, useState, ReactNode } from "react";
 import { Send, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import ChatNavbar from "./ChatNavbar";
 import MessageItem from "./MessageItem";
 import { useSession } from "next-auth/react";
@@ -15,90 +15,138 @@ interface ApiResponse {
   doctors?: Doctor[];
   error?: string;
 }
+
+const INITIAL_BOT_PROMPT =
+  "Hello! I'm your healthcare assistant. Tell me about your health concern and I'll help you find the right doctor or provide guidance.";
+
 const initialBotMessage: Message = {
   id: uuidv4(),
-  text: "Hello! I'm your healthcare assistant. Tell me about your health concern and I'll help you find the right doctor or provide guidance.",
+  text: INITIAL_BOT_PROMPT,
   sender: "BOT",
   timestamp: new Date(),
+  botResponse: "",
 };
+
 export default function ChatInterface() {
   const { data: session, status } = useSession();
-  const [messages, setMessages] = useState<Message[]>([initialBotMessage]);
+  const [messages, setMessages] = useState<Message[]>([]); // start empty, we'll load from init
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (status !== "authenticated" || !conversationId) return;
-    const loadMessages = async () => {
-      try {
-        setIsLoading(true);
-        const res = await fetch(`/api/conversation/${conversationId}`);
-        if (!res.ok) throw new Error(`Failed to fetch messages: ${res.status}`);
-        const data = await res.json();
-        // Always include the initial bot message, followed by fetched messages
-        if (data.messages?.length > 0) {
-          // Avoid duplicating initial message if it exists in fetched messages
-          const hasInitialMessage = data.messages.some(
-            (msg: Message) =>
-              msg.text === initialBotMessage.text && msg.sender === "BOT"
-          );
-          setMessages(
-            hasInitialMessage
-              ? data.messages
-              : [initialBotMessage, ...data.messages]
-          );
-        } else {
-          setMessages([initialBotMessage]); // Keep initial message if no messages fetched
-        }
-      } catch (error) {
-        console.error("Error loading messages:", error);
-        setError("Failed to load chat history.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadMessages();
-  }, [conversationId, status]);
-
+  // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Init conversation and load messages in one call
   useEffect(() => {
     const initConversation = async () => {
-      if (session?.user?.id) {
+      // if not signed in, show greeting only
+      if (!session?.user?.id) {
+        setConversationId(null);
+        setMessages([initialBotMessage]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
         const res = await fetch("/api/conversation/init", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ patientId: session.user.id }),
+          body: JSON.stringify({
+            patientId: session.user.id,
+            initialMessage: initialBotMessage, // backend guards duplicate greeting
+          }),
         });
+
         const data = await res.json();
+
+        if (!res.ok) {
+          console.error("Init API error:", data.error);
+          throw new Error(data.error || "Failed to initialize conversation");
+        }
+
+        // store valid Mongo conversation id
         setConversationId(data.conversationId);
-      } else {
-        setConversationId(null);
+
+        // normalize messages into your frontend Message shape
+        const mapped =
+          (data.messages || []).map((msg: any) => ({
+            id: msg._id || uuidv4(), // react key
+            _id: msg._id, // mongo id
+            sender: msg.sender,
+            text: msg.text,
+            timestamp: msg.timestamp,
+            doctors: msg.doctors || [],
+            appointmentId: msg.appointmentId,
+            prescriptionId: msg.prescriptionId,
+          })) || [];
+
+        if (mapped.length > 0) {
+          setMessages(mapped);
+        } else {
+          setMessages([initialBotMessage]);
+        }
+      } catch (err) {
+        console.error("Error initializing conversation:", err);
+        setError("Failed to initialize conversation.");
+        // fallback to greeting so UI doesn't break
+        setMessages([initialBotMessage]);
+      } finally {
+        setIsLoading(false);
       }
     };
+
     initConversation();
   }, [session?.user?.id]);
 
   const saveMessage = async (
-    conversationId: string,
+    conversationIdArg: string,
     sender: "USER" | "BOT",
     text: string
-  ) => {
-    if (!session?.user) return;
+  ): Promise<string | null> => {
+    if (!session?.user || !conversationIdArg) {
+      console.error("Cannot save message: missing session or conversationId", {
+        session: !!session?.user,
+        conversationId: conversationIdArg,
+      });
+      return null;
+    }
     try {
-      await fetch("/api/conversation/save-message", {
+      const res = await fetch("/api/conversation/save-message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId, sender, text }),
+        body: JSON.stringify({
+          conversationId: conversationIdArg,
+          sender,
+          text,
+        }),
       });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("Error saving message:", errorData.error);
+        throw new Error(errorData.error || "Failed to save message");
+      }
+
+      const data = await res.json();
+      console.log("Save message response:", data);
+      return data.messageId || null;
     } catch (err) {
       console.error("Error saving message:", err);
+      return null;
     }
+  };
+
+  const handleMessageUpdate = (updatedMessage: Message) => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg._id === updatedMessage._id ? { ...msg, ...updatedMessage } : msg
+      )
+    );
   };
 
   const handleSendMessage = async () => {
@@ -109,6 +157,7 @@ export default function ChatInterface() {
       text: inputValue,
       sender: "USER",
       timestamp: new Date(),
+      botResponse: "",
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -117,10 +166,26 @@ export default function ChatInterface() {
     setIsLoading(true);
     setError(null);
 
+    // Save user message to DB if we have a conversationId and session
     if (session?.user && conversationId) {
-      await saveMessage(conversationId, "USER", currentMessage);
+      const mongoId = await saveMessage(conversationId, "USER", currentMessage);
+      if (mongoId) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === userMessage.id ? { ...m, _id: mongoId } : m
+          )
+        );
+      } else {
+        console.error("Failed to save user message, missing mongoId");
+      }
+    } else {
+      console.warn("Skipping message save: no session or conversationId", {
+        session: !!session?.user,
+        conversationId,
+      });
     }
 
+    // call assistant (keep current behavior)
     try {
       const res = await fetch("/api/assistant", {
         method: "POST",
@@ -133,9 +198,17 @@ export default function ChatInterface() {
         }),
       });
 
-      const data: ApiResponse & { conversationId?: string } = await res.json();
-      if (!res.ok) throw new Error(data.error || "Something went wrong");
+      const data: ApiResponse & {
+        conversationId?: string;
+        messageId?: string;
+      } = await res.json();
 
+      if (!res.ok) {
+        console.error("Assistant API error:", data.error);
+        throw new Error(data.error || "Something went wrong");
+      }
+
+      // if assistant creates/returns a conversationId, keep it
       if (data.conversationId && data.conversationId !== conversationId) {
         setConversationId(data.conversationId);
       }
@@ -146,21 +219,33 @@ export default function ChatInterface() {
         sender: "BOT",
         timestamp: new Date(),
         doctors: data.doctors || [],
+        botResponse: "",
       };
 
       setMessages((prev) => [...prev, botMessage]);
 
+      // save bot message too
       if (session?.user && conversationId) {
-        await saveMessage(conversationId, "BOT", data.text);
+        const mongoId = await saveMessage(conversationId, "BOT", data.text);
+        if (mongoId) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === botMessage.id ? { ...m, _id: mongoId } : m
+            )
+          );
+        } else {
+          console.error("Failed to save bot message, missing mongoId");
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error("Error in handleSendMessage:", err);
       setError("Failed to get a response. Please try again.");
       const errorMessage: Message = {
         id: uuidv4(),
         text: "Sorry, I encountered an error. Please try again.",
         sender: "BOT",
         timestamp: new Date(),
+        botResponse: "",
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -174,14 +259,13 @@ export default function ChatInterface() {
     }
   };
 
- const LoadingSkeleton: ReactNode = (
-   <div className="flex justify-start animate-pulse mb-4">
-     <div className="bg-gray-200 rounded-2xl px-4 py-3 w-[60%] mr-12 shadow-sm">
-       <div className="h-6 bg-gray-300 rounded w-3/4 mb-2"></div>
-       <div className="h-4 bg-gray-300 rounded w-1/4"></div>
-     </div>
-   </div>
- );
+  const LoadingSkeleton: ReactNode = (
+    <div className="flex items-center space-x-1">
+      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150" />
+      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-300" />
+    </div>
+  );
 
   return (
     <div className="h-screen flex flex-col bg-gradient-soft">
@@ -189,10 +273,12 @@ export default function ChatInterface() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <MessageItem
-            key={message.id}
+            key={message._id || message.id}
             message={message}
             isAuthenticated={!!session?.user}
+            // send empty string if conversationId is null — MessageItem guards actions
             conversationId={session?.user ? conversationId || "" : ""}
+            onMessageUpdate={handleMessageUpdate}
           />
         ))}
         {isLoading && LoadingSkeleton}
@@ -205,6 +291,7 @@ export default function ChatInterface() {
         )}
         <div ref={messagesEndRef} />
       </div>
+
       <div className="p-4 border-t bg-card">
         <div className="flex items-center space-x-2">
           <Button
@@ -219,13 +306,12 @@ export default function ChatInterface() {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Describe your symptoms or health concern..."
+            placeholder="Describe your symptoms"
             className="flex-1 border-input/50 focus:border-primary/50 focus:ring-primary/20"
             aria-label="Message input"
           />
           <Button
             onClick={handleSendMessage}
-            className="bg-gradient-primary shadow-soft hover:shadow-medium transition-all duration-300"
             disabled={!inputValue.trim() || isLoading}
             aria-label="Send message"
           >

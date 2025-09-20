@@ -1,37 +1,76 @@
+// api/conversation/init/route.ts
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import Conversation, { IConversation } from "@/models/Conversation.model";
-import { Types } from "mongoose";
+import Conversation from "@/models/Conversation.model";
 
 export async function POST(req: Request) {
   try {
-    await connectDB();
-    const { patientId } = await req.json();
+    const { patientId, initialMessage } = await req.json();
 
-    // 🚨 If no patientId → guest, don’t store conversation
     if (!patientId) {
-      return NextResponse.json({ conversationId: null });
+      return NextResponse.json(
+        { error: "Patient ID is required" },
+        { status: 400 }
+      );
     }
 
-    // ✅ Try to find the latest conversation for this patient
-    let conversation: IConversation | null = await Conversation.findOne({
-      patientId,
-    }).sort({ createdAt: -1 });
+    await connectDB();
 
-    // ✅ If no conversation exists, create a new one
+    // 🔎 Look for existing conversation
+    let conversation = await Conversation.findOne({ patientId });
+
     if (!conversation) {
-      conversation = await Conversation.create({
+      // 🆕 Create new conversation
+      const conversationData = {
         patientId,
-        messages: [],
-      });
+        messages: initialMessage
+          ? [
+              {
+                sender: initialMessage.sender,
+                text: initialMessage.text,
+                timestamp: new Date(initialMessage.timestamp),
+              },
+            ]
+          : [],
+      };
+
+      conversation = await Conversation.create(conversationData);
+    } else if (initialMessage) {
+      //  Only add greeting if it's not already in messages
+      const alreadyHasGreeting = conversation.messages.some(
+        (msg) => msg.sender === "BOT" && msg.text === initialMessage.text
+      );
+
+      if (!alreadyHasGreeting) {
+        conversation.messages.push({
+          sender: initialMessage.sender,
+          text: initialMessage.text,
+          timestamp: new Date(initialMessage.timestamp),
+        });
+        await conversation.save();
+      }
     }
 
-    // ✅ Ensure conversationId is a string
-    const conversationId = (conversation._id as Types.ObjectId).toString();
+    // 🛠 Format messages for response
+    const messages = conversation.messages.map((msg) => ({
+      _id: msg._id?.toString(),
+      sender: msg.sender,
+      text: msg.text,
+      timestamp: msg.timestamp,
+      appointmentId: msg.appointmentId?.toString(),
+      prescriptionId: msg.prescriptionId?.toString(),
+      doctors: msg.doctors || [],
+    }));
 
-    return NextResponse.json({ conversationId });
-  } catch (error) {
-    console.error("Error in conversation/init:", error);
+    return NextResponse.json({
+      conversationId: conversation._id.toString(),
+      patientId: conversation.patientId.toString(),
+      messages,
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
+    });
+  } catch (err) {
+    console.error("Error initializing conversation:", err);
     return NextResponse.json(
       { error: "Failed to initialize conversation" },
       { status: 500 }

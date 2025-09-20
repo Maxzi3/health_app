@@ -125,7 +125,7 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
         setFormStatus({ type: "", message: "" });
         setStep("otp");
       }, 2000);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setFormStatus({
         type: "error",
@@ -190,7 +190,7 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
 
             <div className="bg-accent p-4 rounded-lg mb-6">
               <p className="text-sm text-muted-foreground">
-                ✅ Email verified
+                Email verified
                 <br />
                 🔍 Credentials under review
                 <br />
