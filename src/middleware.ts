@@ -123,7 +123,7 @@ export default withAuth(
       if (pathname.startsWith("/bot")) {
         if (role === "DOCTOR") {
           const redirectResponse = NextResponse.redirect(
-            new URL("/auth/unauthorized", req.url)
+            new URL("/dashboard/doctor", req.url)
           );
           response.headers.forEach((value, key) => {
             redirectResponse.headers.set(key, value);

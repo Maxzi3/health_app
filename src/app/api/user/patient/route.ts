@@ -3,6 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import Appointment from "@/models/Appointment.model";
+import Prescription from "@/models/Prescription.model";
+import { Types } from "mongoose";
 
 export async function GET() {
   try {
@@ -13,6 +16,7 @@ export async function GET() {
     }
 
     await connectDB();
+
     const patient = await User.findOne({
       email: session.user.email,
       role: "PATIENT",
@@ -22,11 +26,27 @@ export async function GET() {
       return NextResponse.json({ error: "Patient not found" }, { status: 404 });
     }
 
-    // Example: fetch stats (appointments, prescriptions, consultations)
+    const patientId = new Types.ObjectId(patient._id);
+
+    // Query counts from DB
+    const upcomingAppointments = await Appointment.countDocuments({
+      patientId,
+      date: { $gte: new Date() },
+    });
+
+    const activePrescriptions = await Prescription.countDocuments({
+      patientId,
+      status: "ACTIVE",
+    });
+
+    const totalPrescriptions = await Prescription.countDocuments({
+      patientId,
+    });
+
     const stats = {
-      upcomingAppointments: 3, // Replace with Appointment.countDocuments({ patientId: patient._id, date > today })
-      activePrescriptions: 2, // Replace with Prescription.countDocuments({ patientId: patient._id, active: true })
-      totalConsultations: 12, // Replace with Consultation.countDocuments({ patientId: patient._id })
+      upcomingAppointments,
+      activePrescriptions,
+      totalPrescriptions,
     };
 
     return NextResponse.json({ profile: patient, stats });

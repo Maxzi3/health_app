@@ -5,7 +5,8 @@ export interface IPrescription extends Document {
   doctorId: Types.ObjectId;
   symptoms: string;
   botResponse: string;
-  status: "PENDING" | "APPROVED" | "REJECTED";
+  prescriptionNotes?: string;
+  status: "ACTIVE" | "COMPLETED" | "CANCELLED" | "PENDING";
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -17,9 +18,10 @@ const PrescriptionSchema: Schema<IPrescription> = new Schema(
     doctorId: { type: Schema.Types.ObjectId, ref: "Doctor", required: true },
     symptoms: { type: String, required: true },
     botResponse: { type: String, required: true },
+    prescriptionNotes: { type: String },
     status: {
       type: String,
-      enum: ["PENDING", "APPROVED", "REJECTED"],
+      enum: ["ACTIVE", "COMPLETED", "CANCELLED", "PENDING"],
       default: "PENDING",
     },
   },

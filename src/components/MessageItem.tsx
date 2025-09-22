@@ -72,8 +72,9 @@ const MessageItem = React.memo(
         return;
       }
 
+      // ✅ must send ISO string
       const formattedDate = appointmentDate
-        ? format(appointmentDate, "yyyy-MM-dd")
+        ? appointmentDate.toISOString()
         : undefined;
 
       setLoadingDoctorId(doctor._id);
@@ -87,11 +88,10 @@ const MessageItem = React.memo(
             patientId: session.user.id,
             conversationId,
             messageId: message._id,
-            date: formattedDate,
-            time: appointmentTime,
-            reason: reason, //  User's reason for appointment
-            botResponse: message.text, //  Bot response for context
-            //  Remove symptoms - let backend find original user message
+            date: formattedDate, // ✅ ISO string now
+            time: appointmentTime, // "HH:mm"
+            reason: reason,
+            botResponse: message.text,
           }),
         });
 
@@ -118,6 +118,7 @@ const MessageItem = React.memo(
         setLoadingDoctorId(null);
       }
     };
+
 
     // GET PRESCRIPTION
     const handleGetPrescription = async (doctor: Doctor) => {

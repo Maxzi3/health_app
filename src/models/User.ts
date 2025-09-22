@@ -48,6 +48,7 @@ const UserSchema: Schema<IUser> = new Schema(
       required: function () {
         return !this.googleId;
       },
+      select: false,
     },
     role: { type: String, enum: ["PATIENT", "DOCTOR"], required: true },
     phone: { type: String },
@@ -66,19 +67,19 @@ const UserSchema: Schema<IUser> = new Schema(
     genotype: { type: String },
 
     documents: [{ type: String }],
-    otp: { type: String },
-    otpExpiry: { type: Date },
+    otp: { type: String, select: false },
+    otpExpiry: { type: Date, select: false },
     emailVerified: { type: Boolean, default: false },
     isApproved: { type: Boolean, default: false },
     needsProfileCompletion: { type: Boolean, default: false },
-    googleId: { type: String },
-    refreshToken: { type: String, default: null },
-    resetPasswordToken: { type: String },
-    resetPasswordExpires: { type: Date },
-    resetToken: { type: String },
-    resetTokenExpiry: { type: Date },
-    isDeleted: { type: Boolean, default: false },
-    deletedAt: { type: Date, default: null },
+    googleId: { type: String, select: false },
+    refreshToken: { type: String, default: null, select: false },
+    resetPasswordToken: { type: String, select: false },
+    resetPasswordExpires: { type: Date, select: false },
+    resetToken: { type: String, select: false },
+    resetTokenExpiry: { type: Date, select: false },
+    isDeleted: { type: Boolean, default: false, select: false },
+    deletedAt: { type: Date, default: null, select: false },
   },
   { timestamps: true }
 );

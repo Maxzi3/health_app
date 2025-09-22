@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import Appointment from "@/models/Appointment.model";
+import Prescription from "@/models/Prescription.model";
 
 export async function GET() {
   try {
@@ -13,6 +15,8 @@ export async function GET() {
     }
 
     await connectDB();
+
+    // Find doctor
     const doctor = await User.findOne({
       email: session.user.email,
       role: "DOCTOR",
@@ -22,7 +26,39 @@ export async function GET() {
       return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
     }
 
-    return NextResponse.json(doctor);
+    // === Compute doctor stats ===
+    const doctorId = doctor._id;
+
+    const upcomingAppointments = await Appointment.countDocuments({
+      doctorId,
+      date: { $gte: new Date() },
+      status: "SCHEDULED",
+    });
+
+    const pendingPrescriptions = await Prescription.countDocuments({
+      doctorId,
+      status: "PENDING",
+    });
+
+    const completedConsultations = await Appointment.countDocuments({
+      doctorId,
+      status: "COMPLETED",
+    });
+
+    const totalPatients = await Appointment.distinct("patientId", {
+      doctorId,
+    }).then((patients) => patients.length);
+
+    // === Return wrapped response ===
+    return NextResponse.json({
+      profile: doctor,
+      stats: {
+        upcomingAppointments,
+        pendingPrescriptions,
+        completedConsultations,
+        totalPatients,
+      },
+    });
   } catch (error) {
     console.error("Error fetching doctor:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

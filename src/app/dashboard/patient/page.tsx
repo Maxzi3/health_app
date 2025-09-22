@@ -23,7 +23,7 @@ import ProfileCard from "@/components/ProfileCard";
 interface PatientStats {
   upcomingAppointments: number;
   activePrescriptions: number;
-  totalConsultations: number;
+  totalPrescriptions: number;
 }
 
 export default function PatientDashboard() {
@@ -116,9 +116,9 @@ export default function PatientDashboard() {
                 color: "text-health-green",
               },
               {
-                label: "Total Consultations",
-                value: stats.totalConsultations,
-                icon: User,
+                label: "Total Prescriptions",
+                value: stats.totalPrescriptions,
+                icon: FileText,
                 color: "text-primary",
               },
             ]}

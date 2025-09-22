@@ -7,6 +7,7 @@ export interface IAppointment extends Document {
   botResponse: string;
   scheduledAt: Date;
   status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELED";
+  appointmentNotes: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -18,6 +19,7 @@ const AppointmentSchema: Schema<IAppointment> = new Schema(
     symptoms: { type: String, required: true },
     botResponse: { type: String, required: true },
     scheduledAt: { type: Date, required: true },
+    appointmentNotes: { type: String },
     status: {
       type: String,
       enum: ["PENDING", "CONFIRMED", "COMPLETED", "CANCELED"],
@@ -29,6 +31,5 @@ const AppointmentSchema: Schema<IAppointment> = new Schema(
 
 delete mongoose.models.Appointment;
 export default mongoose.model<IAppointment>("Appointment", AppointmentSchema);
-
 
 // const totalConsultations = await Appointment.countDocuments({ patientId });

@@ -3,7 +3,10 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Prescription from "@/models/Prescription.model";
 import Conversation from "@/models/Conversation.model";
+import User from "@/models/User";
+import { authOptions } from "../auth/[...nextauth]/route";
 import mongoose from "mongoose";
+import { getServerSession } from "next-auth";
 
 export async function POST(req: Request) {
   try {
@@ -33,10 +36,8 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    //  verify doctor
-    const doctor = await mongoose
-      .model("User")
-      .findOne({ _id: doctorId, role: "DOCTOR" });
+    // ✅ verify doctor
+    const doctor = await User.findOne({ _id: doctorId, role: "DOCTOR" });
     if (!doctor) {
       return NextResponse.json(
         { error: `Doctor with ID ${doctorId} not found or not a doctor` },
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
       );
     }
 
-    //  Get conversation and find the original user message
+    // ✅ Get conversation and find the original user message
     const conversation = await Conversation.findOne({
       _id: conversationId,
       "messages._id": messageId,
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
       );
     }
 
-    //  Find the bot message and get the previous user message
+    // ✅ Find the bot message
     const botMessageIndex = conversation.messages.findIndex(
       (msg: any) => msg._id.toString() === messageId && msg.sender === "BOT"
     );
@@ -68,16 +69,20 @@ export async function POST(req: Request) {
       );
     }
 
-    //  Find the user message that preceded this bot response
-    const userMessage =
-      botMessageIndex > 0 ? conversation.messages[botMessageIndex - 1] : null;
+    // ✅ Walk backwards to find the last USER message before the bot
+    let userMessage: any = null;
+    for (let i = botMessageIndex - 1; i >= 0; i--) {
+      if (conversation.messages[i].sender === "USER") {
+        userMessage = conversation.messages[i];
+        break;
+      }
+    }
 
-    const originalUserSymptoms =
-      userMessage && userMessage.sender === "USER"
-        ? userMessage.text
-        : "No original message found";
+    const originalUserSymptoms = userMessage
+      ? userMessage.text
+      : "No original message found";
 
-    //  check if prescription already linked
+    // ✅ check if prescription already linked
     const alreadyLinked = conversation.messages.find(
       (msg: any) => msg._id.toString() === messageId && msg.prescriptionId
     );
@@ -88,18 +93,18 @@ export async function POST(req: Request) {
       );
     }
 
-    //  create prescription with ORIGINAL user message as symptoms
+    // ✅ create prescription
     const prescription = await Prescription.create({
       patientId,
       doctorId,
       conversationId,
       messageId,
-      symptoms: originalUserSymptoms, //  Use original user message
-      botResponse: botResponse || conversation.messages[botMessageIndex].text, //  Use bot response
+      symptoms: originalUserSymptoms, // use original user message
+      botResponse: botResponse || conversation.messages[botMessageIndex].text,
       status: "PENDING",
     });
 
-    //  attach prescription
+    // ✅ attach prescription
     const updated = await Conversation.findOneAndUpdate(
       {
         _id: conversationId,
@@ -134,5 +139,32 @@ export async function POST(req: Request) {
       { error: "Failed to create prescription request" },
       { status: 500 }
     );
+  }
+}
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await connectDB();
+
+    // ✅ confirm doctor role
+    const doctor = await User.findById(session.user.id);
+    if (!doctor || doctor.role !== "DOCTOR") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // ✅ fetch prescriptions belonging to doctor
+    const prescriptions = await Prescription.find({
+      doctorId: session.user.id,
+    }).populate("patientId", "name email");
+
+    return NextResponse.json(prescriptions);
+  } catch (err) {
+    console.error("Error fetching doctor prescriptions:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

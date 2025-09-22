@@ -5,10 +5,10 @@ import {
   User,
   Calendar,
   FileText,
-  Users,
   DollarSign,
   Bell,
   UserCog,
+  CheckCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AccountTab from "@/components/AccountsTab";
@@ -18,11 +18,32 @@ import DashboardTabs from "@/components/DashboardTabs";
 import ProfileCard from "@/components/ProfileCard";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import PrescriptionModal from "@/components/PrescriptionModal";
+import PrescriptionItem from "@/components/PrescriptionItem";
+import AppointmentItem from "@/components/AppointmentItem";
 
 interface DoctorStats {
-  todaysAppointments: number;
-  activePatients: number;
-  monthlyEarnings: string;
+  upcomingAppointments: number;
+  pendingPrescriptions: number;
+  totalPatients: number;
+  completedConsultations: number;
+}
+export interface Prescription {
+  _id: string;
+  patientId: { name: string; email: string };
+  symptoms: string;
+  botResponse: string;
+  status: string;
+  prescriptionNotes?: string;
+}
+
+export interface Appointment {
+  _id: string;
+  patientId: { name: string; email: string };
+  symptoms: string;
+  scheduledAt: string;
+  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELED";
+  note?: string;
 }
 
 export default function DoctorDashboard() {
@@ -31,24 +52,23 @@ export default function DoctorDashboard() {
   const [stats, setStats] = useState<DoctorStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPrescription, setSelectedPrescription] =
+    useState<Prescription | null>(null);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   const fetchDoctor = async () => {
     try {
       setError(null);
       setLoading(true);
-
       const res = await fetch("/api/user/doctor");
       if (!res.ok) throw new Error("Failed to fetch doctor");
       const data = await res.json();
-      setDoctor(data);
 
-      // For now, just set dummy stats (replace later with DB values)
-      setStats({
-        todaysAppointments: 8,
-        activePatients: 45,
-        monthlyEarnings: "$3,200",
-      });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setDoctor(data.profile);
+      setStats(data.stats);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -60,10 +80,42 @@ export default function DoctorDashboard() {
     fetchDoctor();
   }, []);
 
+  const fetchPrescriptions = async () => {
+    try {
+      const res = await fetch("/api/prescription");
+      if (!res.ok) throw new Error("Failed to fetch prescriptions");
+      const data = await res.json();
+      setPrescriptions(data);
+    } catch (err) {
+      console.error("Error fetching prescriptions:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDoctor();
+    fetchPrescriptions();
+  }, []);
+
+  const fetchAppointments = async () => {
+    try {
+      const res = await fetch("/api/appointment");
+      if (!res.ok) throw new Error("Failed to fetch appointments");
+      const data = await res.json();
+      setAppointments(data); // 👈 correct state
+    } catch (err) {
+      console.error("Error fetching appointments:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDoctor();
+    fetchPrescriptions();
+    fetchAppointments();
+  }, []);
+
   const doctorMenuItems = [
     { value: "profile", label: "Profile", icon: User },
     { value: "appointments", label: "Appointments", icon: Calendar },
-    { value: "patients", label: "Patients", icon: Users },
     { value: "prescriptions", label: "Prescriptions", icon: FileText },
     { value: "earnings", label: "Earnings", icon: DollarSign },
     { value: "account", label: "Account", icon: UserCog },
@@ -71,7 +123,7 @@ export default function DoctorDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-soft p-4 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-soft  max-w-7xl mx-auto">
       {/* Stats Section */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -88,22 +140,28 @@ export default function DoctorDashboard() {
         <DashboardStats
           stats={[
             {
-              label: "Today's Appointments",
-              value: stats.todaysAppointments,
+              label: "Upcoming Appointments",
+              value: stats.upcomingAppointments,
               icon: Calendar,
               color: "text-trust-blue",
             },
             {
-              label: "Active Patients",
-              value: stats.activePatients,
-              icon: Users,
+              label: "Pending Prescriptions",
+              value: stats.pendingPrescriptions,
+              icon: FileText,
               color: "text-health-green",
             },
             {
-              label: "Monthly Earnings",
-              value: stats.monthlyEarnings,
-              icon: DollarSign,
+              label: "Total Patients",
+              value: stats.totalPatients,
+              icon: User,
               color: "text-primary",
+            },
+            {
+              label: "Completed Consultations",
+              value: stats.completedConsultations,
+              icon: CheckCircle,
+              color: "text-success",
             },
           ]}
         />
@@ -133,10 +191,53 @@ export default function DoctorDashboard() {
           <AccountTab doctor={doctor} setDoctor={setDoctor} />
         </TabsContent>
 
+        {/* Prescriptions Tab */}
+        <TabsContent value="prescriptions">
+          <div className="max-w-6xl mx-auto">
+            {prescriptions.length === 0 ? (
+              <p>No prescriptions yet.</p>
+            ) : (
+              <div className="space-y-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                {prescriptions.map((p) => (
+                  <PrescriptionItem
+                    key={p._id}
+                    p={p}
+                    onEdit={(prescription) =>
+                      setSelectedPrescription(prescription)
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="appointments">
+          <div>
+            {appointments.length === 0 ? (
+              <p>No appointments yet.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {appointments.map((a) => (
+                  <AppointmentItem
+                    key={a._id}
+                    a={a}
+                    refresh={fetchAppointments}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
         {/* Other Tabs */}
         {doctorMenuItems
           .filter(
-            (item) => item.value !== "profile" && item.value !== "account"
+            (item) =>
+              item.value !== "profile" &&
+              item.value !== "account" &&
+              item.value !== "prescriptions" &&
+              item.value !== "appointments"
           )
           .map((item) => (
             <TabsContent key={item.value} value={item.value}>
@@ -149,6 +250,17 @@ export default function DoctorDashboard() {
             </TabsContent>
           ))}
       </Tabs>
+
+      {/* Prescription Modal */}
+      {selectedPrescription && (
+        <PrescriptionModal
+          prescriptionId={selectedPrescription._id}
+          onSaved={() => {
+            setSelectedPrescription(null);
+            fetchPrescriptions();
+          }}
+        />
+      )}
     </div>
   );
 }

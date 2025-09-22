@@ -3,7 +3,10 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Appointment from "@/models/Appointment.model";
 import Conversation from "@/models/Conversation.model";
+import User from "@/models/User";
 import mongoose from "mongoose";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
 
 export async function POST(req: Request) {
   try {
@@ -13,12 +16,11 @@ export async function POST(req: Request) {
       conversationId,
       messageId,
       botResponse,
-      date: appointmentDate,
-      time: appointmentTime,
+      date: appointmentDate, // ISO string
+      time: appointmentTime, // "HH:mm"
       reason,
     } = await req.json();
 
-    // Basic validation
     if (
       !patientId ||
       !doctorId ||
@@ -49,10 +51,8 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    //  Ensure doctor exists and is a DOCTOR
-    const doctor = await mongoose
-      .model("User")
-      .findOne({ _id: doctorId, role: "DOCTOR" });
+    // ✅ Ensure doctor exists
+    const doctor = await User.findOne({ _id: doctorId, role: "DOCTOR" });
     if (!doctor) {
       return NextResponse.json(
         { error: `Doctor with ID ${doctorId} not found or not a doctor` },
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       );
     }
 
-    //  Get conversation and find the original user message
+    // ✅ Find conversation
     const conversation = await Conversation.findOne({
       _id: conversationId,
       "messages._id": messageId,
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
       );
     }
 
-    //  Find the bot message and get the previous user message
+    // ✅ Locate bot message
     const botMessageIndex = conversation.messages.findIndex(
       (msg: any) => msg._id.toString() === messageId && msg.sender === "BOT"
     );
@@ -84,30 +84,53 @@ export async function POST(req: Request) {
       );
     }
 
-    //  Find the user message that preceded this bot response
-    const userMessage =
-      botMessageIndex > 0 ? conversation.messages[botMessageIndex - 1] : null;
+    // ✅ Walk backwards to find the last USER message
+    let userMessage: any = null;
+    for (let i = botMessageIndex - 1; i >= 0; i--) {
+      if (conversation.messages[i].sender === "USER") {
+        userMessage = conversation.messages[i];
+        break;
+      }
+    }
 
-    const originalUserSymptoms =
-      userMessage && userMessage.sender === "USER"
-        ? userMessage.text
-        : "No original message found";
+    const originalUserSymptoms = userMessage
+      ? userMessage.text
+      : "No original message found";
 
-    const scheduledAt = new Date(`${appointmentDate}T${appointmentTime}:00`);
+    // ✅ Parse appointment date & time
+    let scheduledAt: Date;
+    try {
+      const d = new Date(appointmentDate);
+      if (isNaN(d.getTime())) throw new Error("Invalid date");
 
-    //  Create appointment with original user message + reason
+      const [hours, minutes] = appointmentTime.split(":").map(Number);
+      scheduledAt = new Date(d);
+      scheduledAt.setHours(hours, minutes, 0, 0);
+
+      if (isNaN(scheduledAt.getTime())) throw new Error("Invalid date or time");
+    } catch (e) {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid date or time format. Send date as ISO string and time as HH:mm",
+        },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Create appointment
     const appointment = await Appointment.create({
       patientId,
       doctorId,
       conversationId,
       messageId,
-      symptoms: `${originalUserSymptoms}\n\nReason: ${reason}`, //  Original + reason
-      botResponse: botResponse || conversation.messages[botMessageIndex].text, //  Bot response
+      symptoms: `${originalUserSymptoms}\n\nReason: ${reason}`,
+      botResponse: botResponse || conversation.messages[botMessageIndex].text,
       scheduledAt,
       status: "PENDING",
     });
 
-    //  Try to attach appointment to the message
+    // ✅ Attach to conversation
     const updated = await Conversation.findOneAndUpdate(
       {
         _id: conversationId,
@@ -138,5 +161,32 @@ export async function POST(req: Request) {
       { error: "Failed to create appointment" },
       { status: 500 }
     );
+  }
+}
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await connectDB();
+
+    // ✅ Confirm user is doctor
+    const doctor = await User.findById(session.user.id);
+    if (!doctor || doctor.role !== "DOCTOR") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // ✅ Fetch appointments
+    const appointments = await Appointment.find({
+      doctorId: session.user.id,
+    }).populate("patientId", "name email");
+
+    return NextResponse.json(appointments);
+  } catch (err) {
+    console.error("Error fetching doctor appointments:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
