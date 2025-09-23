@@ -2,30 +2,71 @@ import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Eye, EyeOff, FileText, User } from "lucide-react";
-
-interface Prescription {
-  _id: string;
-  patientId: { name: string; email: string };
-  symptoms: string;
-  botResponse: string;
-  status: string;
-  prescriptionNotes?: string;
-}
+import { Skeleton } from "@/components/ui/skeleton";
+import { Prescription } from "@/types/prescription";
 
 export default function PrescriptionItem({
   p,
   onEdit,
+  loading = false,
 }: {
   p: Prescription;
   onEdit: (prescription: Prescription) => void;
+  loading?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
 
-  const maxLength = 250; // characters before slicing
+  const maxLength = 250;
   const isLong = p.botResponse.length > maxLength;
   const displayText = expanded
     ? p.botResponse
     : p.botResponse.slice(0, maxLength) + (isLong ? "..." : "");
+
+  if (loading) {
+    return (
+      <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm space-y-4">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Skeleton className="h-5 w-5 rounded-full" />
+            <Skeleton className="h-6 w-32" />
+          </div>
+          <Skeleton className="h-6 w-20 rounded-full" />
+        </div>
+
+        {/* Symptoms Skeleton */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+          <Skeleton className="h-4 w-full ml-6" />
+        </div>
+
+        {/* Bot Response Skeleton */}
+        <div className="space-y-1 bg-gray-50 rounded-md p-3">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+
+        {/* Toggle Button Skeleton */}
+        <Skeleton className="h-5 w-24" />
+
+        {/* Notes Skeleton */}
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-4 w-28" />
+          </div>
+          <Skeleton className="h-4 w-full ml-6 mt-1" />
+        </div>
+
+        {/* Action Button Skeleton */}
+        <Skeleton className="h-5 w-24" />
+      </div>
+    );
+  }
 
   return (
     <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm hover:shadow-md transition-shadow duration-200 space-y-4">

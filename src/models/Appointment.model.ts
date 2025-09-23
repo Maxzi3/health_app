@@ -1,18 +1,7 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+import { Appointment } from "@/types/appointment";
+import mongoose, { Schema } from "mongoose";
 
-export interface IAppointment extends Document {
-  patientId: Types.ObjectId;
-  doctorId: Types.ObjectId;
-  symptoms: string;
-  botResponse: string;
-  scheduledAt: Date;
-  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELED";
-  appointmentNotes: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-const AppointmentSchema: Schema<IAppointment> = new Schema(
+const AppointmentSchema: Schema<Appointment> = new Schema(
   {
     patientId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     doctorId: { type: Schema.Types.ObjectId, ref: "User", required: true },
@@ -30,6 +19,4 @@ const AppointmentSchema: Schema<IAppointment> = new Schema(
 );
 
 delete mongoose.models.Appointment;
-export default mongoose.model<IAppointment>("Appointment", AppointmentSchema);
-
-// const totalConsultations = await Appointment.countDocuments({ patientId });
+export default mongoose.model<Appointment>("Appointment", AppointmentSchema);

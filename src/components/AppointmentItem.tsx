@@ -2,55 +2,100 @@
 import { useState } from "react";
 import { Calendar, Eye, EyeOff, FileText, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import ReactMarkdown from "react-markdown";
-
-interface Appointment {
-  _id: string;
-  patientId: { name: string; email: string };
-  symptoms: string;
-  scheduledAt: string;
-  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELED";
-  notes?: string;
-  botResponse?: string;
-}
+import { Appointment } from "@/types/appointment";
+import { format } from "date-fns";
+import toast from "react-hot-toast";
 
 export default function AppointmentItem({
   a,
   refresh,
+  loading = false,
 }: {
   a: Appointment;
   refresh: () => void;
+  loading?: boolean;
 }) {
   const [updating, setUpdating] = useState(false);
-  const [notes, setNotes] = useState(a.notes || "");
+  const [appointmentNotes, setAppointmentNotes] = useState(
+    a.appointmentNotes || ""
+  );
   const [expanded, setExpanded] = useState(false);
 
   const updateStatus = async (status: Appointment["status"]) => {
     setUpdating(true);
     try {
-      const res = await fetch(`/api/appointment/${a._id}/update`, {
+      const res = await fetch(`/api/appointment/${a._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status, notes }),
+        body: JSON.stringify({ status, appointmentNotes }),
       });
       if (!res.ok) throw new Error("Failed to update appointment");
+      toast.success(`Status changed to ${status}`);
       refresh();
     } catch (err) {
       console.error("Update failed:", err);
+      toast.error("Failed to update appointment");
     } finally {
       setUpdating(false);
     }
   };
 
-  const maxLength = 250; // characters before slicing
+  const maxLength = 250;
   const isLong = (a.botResponse ?? "").length > maxLength;
   const displayText = expanded
     ? a.botResponse
     : (a.botResponse ?? "").slice(0, maxLength) + (isLong ? "..." : "");
 
+  if (loading) {
+    return (
+      <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Skeleton className="h-5 w-5 rounded-full" />
+            <Skeleton className="h-6 w-32" />
+          </div>
+          <Skeleton className="h-6 w-20 rounded-full" />
+        </div>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+          <Skeleton className="h-4 w-full ml-6" />
+        </div>
+        <div className="space-y-1 bg-gray-50 rounded-md p-3">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+        <Skeleton className="h-5 w-24" />
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+          <Skeleton className="h-4 w-40 ml-6" />
+        </div>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+          <Skeleton className="h-16 w-full ml-6" />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-8 w-24 rounded-md" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm hover:shadow-md transition-shadow duration-200 space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <User className="h-5 w-5 text-gray-500" />
@@ -94,8 +139,6 @@ export default function AppointmentItem({
           {a.status.toLowerCase()}
         </Badge>
       </div>
-
-      {/* Symptoms */}
       <div className="text-sm text-gray-600">
         <span className="font-medium text-gray-800 flex items-center gap-2">
           <FileText className="h-4 w-4" />
@@ -103,13 +146,9 @@ export default function AppointmentItem({
         </span>
         <p className="mt-1 pl-6">{a.symptoms}</p>
       </div>
-
-      {/* Bot response with markdown */}
       <div className="text-sm text-gray-700 prose prose-sm max-w-none bg-gray-50 rounded-md p-3">
         <ReactMarkdown>{displayText}</ReactMarkdown>
       </div>
-
-      {/* Toggle button */}
       {isLong && (
         <button
           className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1 transition-colors"
@@ -128,45 +167,55 @@ export default function AppointmentItem({
           )}
         </button>
       )}
-      {/* Date */}
       <div className="text-sm text-gray-600">
         <span className="font-medium text-gray-800 flex items-center gap-2">
           <Calendar className="h-4 w-4" />
           Date:
         </span>
-        <p className="mt-1 pl-6">{new Date(a.scheduledAt).toLocaleString()}</p>
+        <p className="mt-1 pl-6">{format(a.scheduledAt, "PPPp")}</p>
       </div>
-
-      {/* Notes */}
       <div className="text-sm text-gray-600">
         <span className="font-medium text-gray-800 flex items-center gap-2">
           <FileText className="h-4 w-4" />
           Notes:
         </span>
         <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          value={appointmentNotes}
+          onChange={(e) => setAppointmentNotes(e.target.value)}
           placeholder="Add notes..."
           className="w-full mt-1 pl-6 border border-gray-300 rounded-md p-2 text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
         />
       </div>
-
-      {/* Action buttons */}
       <div className="flex flex-wrap gap-2 mt-2">
-        {["PENDING", "CONFIRMED", "COMPLETED", "CANCELED"].map((status) => (
-          <button
-            key={status}
-            disabled={updating}
-            onClick={() => updateStatus(status as Appointment["status"])}
-            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-              a.status === status
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-            } ${updating ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            {status}
-          </button>
-        ))}
+        {["CONFIRMED", "COMPLETED", "CANCELLED"]
+          .filter(
+            (status) =>
+              a.status === status ||
+              (a.status !== "COMPLETED" && a.status !== "CANCELLED")
+          )
+          .map((status) => (
+            <button
+              key={status}
+              disabled={
+                updating ||
+                a.status === status ||
+                a.status === "COMPLETED" ||
+                a.status === "CANCELLED"
+              }
+              onClick={() => updateStatus(status as Appointment["status"])}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                a.status === status
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+              } ${
+                updating || a.status === "COMPLETED" || a.status === "CANCELLED"
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
+              }`}
+            >
+              {status}
+            </button>
+          ))}
       </div>
     </div>
   );

@@ -31,8 +31,8 @@ export async function GET() {
 
     const upcomingAppointments = await Appointment.countDocuments({
       doctorId,
-      date: { $gte: new Date() },
-      status: "SCHEDULED",
+      scheduledAt: { $gte: new Date() },
+      status: "CONFIRMED",
     });
 
     const pendingPrescriptions = await Prescription.countDocuments({
@@ -49,6 +49,7 @@ export async function GET() {
       doctorId,
     }).then((patients) => patients.length);
 
+    console.log(upcomingAppointments);
     // === Return wrapped response ===
     return NextResponse.json({
       profile: doctor,

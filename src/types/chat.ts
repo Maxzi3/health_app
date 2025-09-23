@@ -1,4 +1,3 @@
-// Fixed types/chat.ts
 import { Document, Types } from "mongoose";
 
 export interface Doctor {

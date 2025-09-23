@@ -1,21 +1,11 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+import mongoose, { Schema } from "mongoose";
+import { Prescription as PrescriptionType } from "@/types/prescription";
 
-export interface IPrescription extends Document {
-  patientId: Types.ObjectId;
-  doctorId: Types.ObjectId;
-  symptoms: string;
-  botResponse: string;
-  prescriptionNotes?: string;
-  status: "ACTIVE" | "COMPLETED" | "CANCELLED" | "PENDING";
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-
-const PrescriptionSchema: Schema<IPrescription> = new Schema(
+const PrescriptionSchema: Schema<PrescriptionType> = new Schema(
   {
     patientId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    doctorId: { type: Schema.Types.ObjectId, ref: "Doctor", required: true },
+    doctorId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    messageId: { type: Schema.Types.ObjectId, required: true },
     symptoms: { type: String, required: true },
     botResponse: { type: String, required: true },
     prescriptionNotes: { type: String },
@@ -29,4 +19,4 @@ const PrescriptionSchema: Schema<IPrescription> = new Schema(
 );
 
 export default mongoose.models.Prescription ||
-  mongoose.model<IPrescription>("Prescription", PrescriptionSchema);
+  mongoose.model<PrescriptionType>("Prescription", PrescriptionSchema);

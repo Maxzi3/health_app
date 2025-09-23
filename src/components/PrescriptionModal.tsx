@@ -13,9 +13,11 @@ import { Textarea } from "@/components/ui/textarea";
 export default function PrescriptionModal({
   prescriptionId,
   onSaved,
+  refresh,
 }: {
   prescriptionId: string;
   onSaved: () => void;
+  refresh: () => void;
 }) {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,12 +25,13 @@ export default function PrescriptionModal({
   const handleSave = async () => {
     setLoading(true);
     try {
-      await fetch(`/api/prescriptions/${prescriptionId}`, {
+      await fetch(`/api/prescription/${prescriptionId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prescriptionNotes: notes }),
       });
       onSaved();
+      refresh();
     } catch (err) {
       console.error("Error saving prescription:", err);
     } finally {

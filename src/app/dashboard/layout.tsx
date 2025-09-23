@@ -7,7 +7,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <ChatNavbar />
 
       {/* Page content */}
-      <main className="flex-1 p-6 bg-gradient-soft">{children}</main>
+      <main className="flex-1 bg-gradient-soft">{children}</main>
     </div>
   );
 }

@@ -173,20 +173,30 @@ export async function GET() {
 
     await connectDB();
 
-    // ✅ Confirm user is doctor
-    const doctor = await User.findById(session.user.id);
-    if (!doctor || doctor.role !== "DOCTOR") {
+    const user = await User.findById(session.user.id);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    let appointments;
+
+    if (user.role === "DOCTOR") {
+      // Doctor → fetch patients' appointments
+      appointments = await Appointment.find({
+        doctorId: user._id,
+      }).populate("patientId", "name email");
+    } else if (user.role === "PATIENT") {
+      // Patient → fetch their own appointments
+      appointments = await Appointment.find({
+        patientId: user._id,
+      }).populate("doctorId", "name email");
+    } else {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // ✅ Fetch appointments
-    const appointments = await Appointment.find({
-      doctorId: session.user.id,
-    }).populate("patientId", "name email");
-
     return NextResponse.json(appointments);
   } catch (err) {
-    console.error("Error fetching doctor appointments:", err);
+    console.error("Error fetching appointments:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

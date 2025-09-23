@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    // ✅ verify doctor
+    //  verify doctor
     const doctor = await User.findOne({ _id: doctorId, role: "DOCTOR" });
     if (!doctor) {
       return NextResponse.json(
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Get conversation and find the original user message
+    //  Get conversation and find the original user message
     const conversation = await Conversation.findOne({
       _id: conversationId,
       "messages._id": messageId,
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Find the bot message
+    //  Find the bot message
     const botMessageIndex = conversation.messages.findIndex(
       (msg: any) => msg._id.toString() === messageId && msg.sender === "BOT"
     );
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Walk backwards to find the last USER message before the bot
+    //  Walk backwards to find the last USER message before the bot
     let userMessage: any = null;
     for (let i = botMessageIndex - 1; i >= 0; i--) {
       if (conversation.messages[i].sender === "USER") {
@@ -82,7 +82,7 @@ export async function POST(req: Request) {
       ? userMessage.text
       : "No original message found";
 
-    // ✅ check if prescription already linked
+    //  check if prescription already linked
     const alreadyLinked = conversation.messages.find(
       (msg: any) => msg._id.toString() === messageId && msg.prescriptionId
     );
@@ -93,7 +93,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ create prescription
+    // create prescription
     const prescription = await Prescription.create({
       patientId,
       doctorId,
@@ -104,7 +104,7 @@ export async function POST(req: Request) {
       status: "PENDING",
     });
 
-    // ✅ attach prescription
+    //  attach prescription
     const updated = await Conversation.findOneAndUpdate(
       {
         _id: conversationId,
@@ -151,20 +151,28 @@ export async function GET() {
 
     await connectDB();
 
-    // ✅ confirm doctor role
-    const doctor = await User.findById(session.user.id);
-    if (!doctor || doctor.role !== "DOCTOR") {
+    const user = await User.findById(session.user.id);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    let prescriptions;
+
+    if (user.role === "DOCTOR") {
+      prescriptions = await Prescription.find({
+        doctorId: user._id,
+      }).populate("patientId", "name email");
+    } else if (user.role === "PATIENT") {
+      prescriptions = await Prescription.find({
+        patientId: user._id,
+      }).populate("doctorId", "name email");
+    } else {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // ✅ fetch prescriptions belonging to doctor
-    const prescriptions = await Prescription.find({
-      doctorId: session.user.id,
-    }).populate("patientId", "name email");
-
     return NextResponse.json(prescriptions);
   } catch (err) {
-    console.error("Error fetching doctor prescriptions:", err);
+    console.error("Error fetching prescriptions:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

@@ -31,7 +31,8 @@ export async function GET() {
     // Query counts from DB
     const upcomingAppointments = await Appointment.countDocuments({
       patientId,
-      date: { $gte: new Date() },
+      status: "CONFIRMED", // only confirmed ones
+      scheduledAt: { $gte: new Date() }, // future events
     });
 
     const activePrescriptions = await Prescription.countDocuments({

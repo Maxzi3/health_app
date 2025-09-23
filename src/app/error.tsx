@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Logo from "@/components/Logo";
 
 export default function GlobalError({
   error,
@@ -18,9 +19,12 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <Alert className="max-w-md">
         <AlertCircle className="h-4 w-4" />
+        <div className="flex justify-center">
+          <Logo />
+        </div>
         <AlertTitle>Something went wrong</AlertTitle>
         <AlertDescription className="mt-2">
           <p className="text-sm text-muted-foreground mb-4">
