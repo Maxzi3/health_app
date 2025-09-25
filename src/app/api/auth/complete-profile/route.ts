@@ -21,13 +21,7 @@ export async function POST(request: Request) {
     const bio = (formData.get("bio") as string) || "";
     const cvFile = formData.get("cv") as File | null;
 
-    console.log("Form data:", {
-      specialization,
-      licenseNumber,
-      experience,
-      bio,
-      cvFile: cvFile ? cvFile.name : null,
-    });
+
 
     if (!specialization || !licenseNumber) {
       return NextResponse.json(

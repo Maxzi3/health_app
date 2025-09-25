@@ -17,8 +17,8 @@ const transporter = nodemailer.createTransport(
         port: 465,
         secure: true,
         auth: {
-          user: process.env.SMTP_USER, 
-          pass: process.env.SMTP_PASS, 
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
         },
       }
     : {
@@ -32,7 +32,6 @@ const transporter = nodemailer.createTransport(
       }
 );
 
-
 // General email sender
 async function sendEmail(
   to: string,
@@ -41,18 +40,11 @@ async function sendEmail(
   attachments?: Attachment[]
 ) {
   return transporter.sendMail({
-    from: `"Medify" <${process.env.FROM_EMAIL}>`, 
+    from: `"Medify" <${process.env.FROM_EMAIL}>`,
     to,
     subject,
     html,
-    attachments: [
-      {
-        filename: "Logo-Light.png",
-        path: "public/images/Logo-Dark.png", 
-        cid: "medify-logo", 
-      },
-      ...(attachments || []),
-    ],
+    attachments,
   });
 }
 

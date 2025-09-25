@@ -1,6 +1,7 @@
 const brandHeader = `
   <div style="background:#2563eb;padding:16px;text-align:center;">
-       <img src="cid:medify-logo" alt="Medify" style="height:40px;">
+      <img src="https://medify-devmaxzi.vercel.app/images/Logo-Dark.png" alt="Medify" style="height:40px;">
+
   </div>
 `;
 

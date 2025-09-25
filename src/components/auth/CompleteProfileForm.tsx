@@ -125,7 +125,7 @@ export default function CompleteProfileForm() {
               <select
                 id="specialization"
                 {...register("specialization")}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-secondary ${
                   errors.specialization ? "border-destructive" : "border-border"
                 }`}
               >
@@ -164,22 +164,40 @@ export default function CompleteProfileForm() {
             </div>
 
             <div className="space-y-2">
-              <Label>Upload CV (PDF or DOC)</Label>
-              <Input
-                type="file"
-                accept=".pdf,.doc,.docx"
-                className="text-sm text-muted-foreground"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] || undefined;
-                  setValue("cv", file);
-                  e.target.value = "";
-                }}
-              />
-              {cvFile && (
-                <p className="text-xs text-muted-foreground">
-                  Selected: {cvFile.name}
-                </p>
-              )}
+              <Label htmlFor="cv">Upload CV (PDF or DOC)</Label>
+
+              <div className="flex items-center gap-3">
+                {/* Hidden real input */}
+                <Input
+                  id="cv"
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || undefined;
+                    setValue("cv", file);
+                    e.target.value = "";
+                  }}
+                />
+
+                {/* Styled button as file picker */}
+                <label
+                  htmlFor="cv"
+                  className="cursor-pointer px-4 py-2 rounded-md bg-primary text-primary-foreground 
+                 hover:bg-primary/90 transition font-medium shadow-sm"
+                >
+                  Choose File
+                </label>
+
+                {/* Show selected file name */}
+                {cvFile && (
+                  <span className="text-sm text-muted-foreground truncate max-w-[200px]">
+                    {cvFile.name}
+                  </span>
+                )}
+              </div>
+
+              {/* Error message */}
               {errors.cv && (
                 <p className="text-sm text-destructive">{errors.cv.message}</p>
               )}
