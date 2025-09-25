@@ -16,8 +16,8 @@ const PricingSection = () => {
       price: "Free",
       description: "Perfect for occasional health consultations",
       features: [
-        "AI symptom checker",
-        "1 video consultation per month",
+        "AI symptom checker (Capped 3 times daily)",
+        "1 Appoinement consultation per month",
         "Basic health tracking",
         "Email support",
       ],
@@ -30,7 +30,7 @@ const PricingSection = () => {
       description: "Ideal for regular health monitoring",
       features: [
         "Unlimited AI symptom checks",
-        "5 video consultations per month",
+        "5 Appoinement consultations per month",
         "Priority booking",
         "Advanced health analytics",
         "24/7 chat support",

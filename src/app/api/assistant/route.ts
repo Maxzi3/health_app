@@ -3,10 +3,15 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { illnessToSpecialty } from "@/lib/specialtyMap";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import Conversation from "@/models/Conversation.model"; // needed for daily tracking
+import { isSameDay } from "date-fns";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-//  Doctor matching from DB
+// ⚡ Daily message cap
+const MESSAGE_LIMIT = 1;
+
+// ---------------- Doctor Matching ----------------
 async function matchDoctors(symptoms: string[]) {
   const specialtiesNeeded = new Set<string>();
 
@@ -29,7 +34,6 @@ async function matchDoctors(symptoms: string[]) {
   if (specialtiesNeeded.size === 0)
     specialtiesNeeded.add("General Practitioner");
 
-  //  Fetch real doctors from DB
   await connectDB();
   const doctors = await User.find({
     role: "DOCTOR",
@@ -38,7 +42,6 @@ async function matchDoctors(symptoms: string[]) {
     .select("name specialization experience")
     .limit(10);
 
-  // ⚡ Return doctors with proper _id field
   return doctors
     .map((doc) => ({
       _id: doc._id.toString(),
@@ -49,7 +52,7 @@ async function matchDoctors(symptoms: string[]) {
     .slice(0, 3);
 }
 
-//  Fallback symptom extractor
+// ---------------- Symptom Extractor ----------------
 function extractSymptoms(message: string): string[] {
   const symptoms: string[] = [];
   const lower = message.toLowerCase();
@@ -77,7 +80,7 @@ function extractSymptoms(message: string): string[] {
     "palpitations",
     "insomnia",
     "swelling",
-    "purging", // Add this for your specific case
+    "purging",
   ];
   keywords.forEach((kw) => {
     if (lower.includes(kw)) symptoms.push(kw);
@@ -85,14 +88,56 @@ function extractSymptoms(message: string): string[] {
   return symptoms;
 }
 
+// ---------------- Main POST Handler ----------------
 export async function POST(req: Request) {
   try {
     const { message, isAuthenticated, conversationId, patientId } =
       await req.json();
 
+    // 🛑 Require auth & conversation to enforce limits
+    if (!isAuthenticated || !conversationId || !patientId) {
+      return NextResponse.json(
+        { error: "Authentication and conversation ID are required." },
+        { status: 401 }
+      );
+    }
+
+    await connectDB();
+
+    // 1. Get conversation
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return NextResponse.json(
+        { error: "Conversation not found." },
+        { status: 404 }
+      );
+    }
+
+    // 2. Reset daily counter if new day
+    const now = new Date();
+    if (!isSameDay(conversation.lastMessageDate, now)) {
+      conversation.dailyMessageCount = 0;
+    }
+
+    // 3. Enforce limit
+    if (conversation.dailyMessageCount >= MESSAGE_LIMIT) {
+      return NextResponse.json(
+        {
+          text: "⚠️ You’ve reached your daily free message limit. Try again tomorrow",
+        },
+        { status: 200 }
+      );
+    }
+
+    // ✅ Update usage
+    conversation.dailyMessageCount += 1;
+    conversation.lastMessageDate = now;
+    await conversation.save();
+
+    // 4. Generate AI response
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-const prompt = `
+    const prompt = `
 You are a medical assistant AI. Your goal is to provide concise, easy-to-read medical guidance.
 Analyze the user's message: "${message}".
 
@@ -111,7 +156,7 @@ Finally, include the disclaimer: > ⚠️ **Disclaimer:** This is for informatio
     const result = await model.generateContent(prompt);
     let responseText = result.response.text();
 
-    //  Extract JSON with symptoms
+    // 5. Extract JSON with symptoms
     let extractedSymptoms: string[] = [];
     const jsonMatch = responseText.match(
       /\{[\s\S]*"symptoms":\s*\[[\s\S]*\][\s\S]*\}/
@@ -131,13 +176,10 @@ Finally, include the disclaimer: > ⚠️ **Disclaimer:** This is for informatio
       extractedSymptoms = extractSymptoms(message);
     }
 
-    //  Doctor recommendations (only if logged in)
+    // 6. Doctor recommendations
     const doctors = isAuthenticated
       ? await matchDoctors(extractedSymptoms)
       : [];
-
-    //  Remove the duplicate message saving - ChatInterface already handles this
-    // The prescription/appointment routes should use the original user message, not bot response
 
     return NextResponse.json({
       text: responseText,

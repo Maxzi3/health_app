@@ -38,6 +38,8 @@ export interface IConversation extends Document {
   _id: Types.ObjectId;
   patientId: Types.ObjectId;
   messages: IMessage[];
+  dailyMessageCount: number;
+  lastMessageDate: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }

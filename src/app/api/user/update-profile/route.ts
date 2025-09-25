@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+import { authOptions } from "@/lib/authOptions";
 
 export async function POST(req: Request) {
   try {
@@ -17,6 +17,7 @@ export async function POST(req: Request) {
 
     // whitelist of fields allowed to update
     const allowedFields = [
+      "name",
       "specialization",
       "experience",
       "licenseNumber",
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true, user });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Update profile error:", err);
     return NextResponse.json(

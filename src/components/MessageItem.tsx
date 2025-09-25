@@ -22,7 +22,6 @@ import { format } from "date-fns";
 const MessageItem = React.memo(
   ({
     message,
-    isAuthenticated,
     conversationId,
     onMessageUpdate,
   }: {

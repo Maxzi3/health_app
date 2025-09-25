@@ -1,27 +1,24 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Conversation from "@/models/Conversation.model";
 import mongoose from "mongoose";
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: Request, context: any) {
   try {
-    const { id } = params;
-    console.log("Fetching conversation with ID:", id);
+    const { conversationId } = (
+      context as { params: { conversationId: string } }
+    ).params;
+    console.log("Fetching conversation with ID:", conversationId);
 
-    if (!id) {
-      console.error("No conversation ID provided");
+    if (!conversationId) {
       return NextResponse.json(
         { error: "Conversation ID is required" },
         { status: 400 }
       );
     }
 
-    //  Use mongoose.Types.ObjectId.isValid() for proper validation
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      console.error("Invalid ObjectId format:", id);
+    if (!mongoose.Types.ObjectId.isValid(conversationId)) {
       return NextResponse.json(
         { error: "Invalid conversation ID format" },
         { status: 400 }
@@ -30,7 +27,7 @@ export async function GET(
 
     await connectDB();
 
-    const conversation = await Conversation.findById(id);
+    const conversation = await Conversation.findById(conversationId);
 
     if (!conversation) {
       return NextResponse.json(
@@ -39,7 +36,6 @@ export async function GET(
       );
     }
 
-    // Transform messages to ensure _id is included as string
     const messages = conversation.messages.map((msg) => ({
       _id: msg._id?.toString(),
       sender: msg.sender,
@@ -47,7 +43,7 @@ export async function GET(
       timestamp: msg.timestamp,
       appointmentId: msg.appointmentId?.toString(),
       prescriptionId: msg.prescriptionId?.toString(),
-      doctors: msg.doctors || [], // Include doctors array
+      doctors: msg.doctors || [],
     }));
 
     return NextResponse.json({

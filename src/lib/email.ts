@@ -41,7 +41,7 @@ async function sendEmail(
   attachments?: Attachment[]
 ) {
   return transporter.sendMail({
-    from: `"Medify" <${process.env.FROM_EMAIL}>`, // e.g. your Gmail
+    from: `"Medify" <${process.env.FROM_EMAIL}>`, 
     to,
     subject,
     html,

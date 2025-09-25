@@ -18,7 +18,7 @@ const FAQSEction = () => {
         "Yes, absolutely. We are fully HIPAA compliant and use enterprise-grade encryption to protect your health information. All data is encrypted both in transit and at rest, and we never share your personal health information without your explicit consent.",
     },
     {
-      question: "Can I get prescriptions through video consultations?",
+      question: "Can I get prescriptions through Appointment?",
       answer:
         "Yes, licensed healthcare providers on our platform can prescribe medications during video consultations when medically appropriate. Prescriptions are sent directly to your preferred pharmacy, and you'll receive notifications when they're ready for pickup.",
     },

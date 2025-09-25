@@ -62,7 +62,7 @@ const TestimonialsSection = () => {
       setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [testimonials.length]);
 
   const handlePrev = () => {
     setCurrentTestimonial(

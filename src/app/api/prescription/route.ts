@@ -4,9 +4,9 @@ import { connectDB } from "@/lib/mongodb";
 import Prescription from "@/models/Prescription.model";
 import Conversation from "@/models/Conversation.model";
 import User from "@/models/User";
-import { authOptions } from "../auth/[...nextauth]/route";
 import mongoose from "mongoose";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 
 export async function POST(req: Request) {
   try {

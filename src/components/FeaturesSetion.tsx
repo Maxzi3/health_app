@@ -21,7 +21,7 @@ const FeaturesSection = () => {
       icon: Video,
       title: "Secure Video Calls",
       description:
-        "Connect with licensed healthcare professionals through encrypted, HIPAA-compliant video consultations.",
+        "Connect with licensed healthcare professionals through encrypted, HIPAA-compliant consultations.",
       details: "Your privacy and security are our top priorities.",
     },
     {

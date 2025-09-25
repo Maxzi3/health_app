@@ -52,10 +52,10 @@ export default function DoctorDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<
     "ALL" | Appointment["status"]
-  >("PENDING");
+  >("ALL");
   const [statusFilterPrescriptions, setStatusFilterPrescriptions] = useState<
     "ALL" | Prescription["status"]
-  >("PENDING");
+  >("ALL");
 
   const router = useRouter();
 

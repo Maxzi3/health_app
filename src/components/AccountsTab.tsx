@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -222,6 +223,10 @@ export default function AccountTab({
                     <Label>Email</Label>
                     <Input {...doctorForm.register("email")} disabled />
                   </div>
+                  <div className="md:col-span-2">
+                    <Label>Name</Label>
+                    <Input {...doctorForm.register("name")} />
+                  </div>
                   <div>
                     <Label>Specialization</Label>
                     <select
@@ -288,11 +293,7 @@ export default function AccountTab({
                 <div className="flex gap-4">
                   <Button
                     type="submit"
-                    disabled={
-                      profileLoading ||
-                      !doctorForm.formState.isDirty ||
-                      !doctorForm.formState.isValid
-                    }
+                    disabled={profileLoading || !doctorForm.formState.isDirty}
                     className="flex-1"
                   >
                     {profileLoading ? (
@@ -333,6 +334,10 @@ export default function AccountTab({
                       disabled
                       readOnly
                     />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label>Name</Label>
+                    <Input {...patientForm.register("name")} />
                   </div>
                   <div>
                     <Label>Date of Birth</Label>
@@ -472,11 +477,7 @@ export default function AccountTab({
               <div className="flex gap-4">
                 <Button
                   type="submit"
-                  disabled={
-                    passwordLoading ||
-                    !passwordForm.formState.isDirty ||
-                    !passwordForm.formState.isValid
-                  }
+                  disabled={passwordLoading || !passwordForm.formState.isDirty}
                   className="flex-1"
                 >
                   {passwordLoading ? (

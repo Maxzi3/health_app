@@ -3,14 +3,11 @@
 import { useEffect, useState } from "react";
 import Logo from "./Logo";
 
-
-
-const LogoSpinnerOverlay = ({ active }: { active: boolean }) => {
+const LogoSpinnerOverlay = ({ active = true }: { active?: boolean }) => {
   const [visible, setVisible] = useState(active);
 
   useEffect(() => {
     if (!active) {
-      // Wait for fade-out animation before unmounting
       const timeout = setTimeout(() => setVisible(false), 600);
       return () => clearTimeout(timeout);
     } else {
@@ -32,4 +29,5 @@ const LogoSpinnerOverlay = ({ active }: { active: boolean }) => {
     </div>
   );
 };
+
 export default LogoSpinnerOverlay;

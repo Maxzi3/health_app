@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     sendOtpEmail(email, name, otp);
 
     return NextResponse.json(
-      { message: "User created successfully. Please verify your email." },
+      { message: "Successfull. Please verify your email." },
       { status: 201 }
     );
   } catch (error) {

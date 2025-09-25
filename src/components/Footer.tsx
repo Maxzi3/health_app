@@ -40,21 +40,21 @@ const Footer = () => {
                 <FaInstagram className="w-5 h-5" />
               </a>
               <a
-                href="https://facebook.com/healthapp"
+                href="#"
                 aria-label="Facebook"
                 className="w-10 h-10  p-2 bg-background/10 rounded-lg flex items-center justify-center hover:bg-primary focus-visible:ring"
               >
                 <FaFacebook className="w-5 h-5" />
               </a>
               <a
-                href="https://linkedin.com/company/healthapp"
+                href="https://www.linkedin.com/in/devmaxzi"
                 aria-label="LinkedIn"
                 className="w-10 h-10 p-2 bg-background/10 rounded-lg flex items-center justify-center hover:bg-primary focus-visible:ring"
               >
                 <FaLinkedin className="w-5 h-5" />
               </a>
               <a
-                href="https://github.com/maxzi3/healthapp"
+                href="https://github.com/Maxzi3"
                 aria-label="GitHub"
                 className="w-10 h-10 p-2 bg-background/10 rounded-lg flex items-center justify-center hover:bg-primary focus-visible:ring"
               >

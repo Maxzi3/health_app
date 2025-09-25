@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
-
 interface PatientPrescriptionsProps {
   prescriptions: Prescription[];
   loading: boolean;
@@ -27,7 +26,6 @@ export default function PatientPrescriptions({
   prescriptions,
   loading,
   onMarkCompleted,
-  refresh,
 }: PatientPrescriptionsProps) {
   const [expanded, setExpanded] = useState<{ [key: string]: boolean }>({});
 
@@ -41,10 +39,7 @@ export default function PatientPrescriptions({
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-0 max-w-6xl mx-auto">
       {loading ? (
         [1, 2, 3].map((i) => (
-          <Card
-            key={i}
-            className="border border-gray-200 rounded-xl bg-white shadow-sm"
-          >
+          <Card key={i}>
             <CardContent className="p-5 space-y-4">
               {/* Header Skeleton */}
               <div className="flex items-center justify-between">
@@ -74,7 +69,7 @@ export default function PatientPrescriptions({
               </div>
 
               {/* Bot Response Skeleton */}
-              <div className="space-y-1 bg-gray-50 rounded-md p-3">
+              <div className="space-y-1  rounded-md p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <Skeleton className="h-4 w-4" />
                   <Skeleton className="h-4 w-28" />
@@ -90,9 +85,7 @@ export default function PatientPrescriptions({
           </Card>
         ))
       ) : prescriptions.length === 0 ? (
-        <p className="text-center col-span-full text-gray-600">
-          No prescriptions yet.
-        </p>
+        <p className="text-center col-span-full ">No prescriptions yet.</p>
       ) : (
         prescriptions.map((pres) => {
           const isExpanded = expanded[pres._id] || false;
@@ -102,16 +95,13 @@ export default function PatientPrescriptions({
             : pres.botResponse.slice(0, maxLength) + (isLong ? "..." : "");
 
           return (
-            <Card
-              key={pres._id}
-              className="border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow duration-200"
-            >
+            <Card key={pres._id}>
               <CardContent className="p-5 space-y-4">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <Stethoscope className="h-5 w-5 text-gray-500" />
-                    <p className="text-lg font-semibold text-gray-800">
+                    <Stethoscope className="h-5 w-5" />
+                    <p className="text-lg font-semibold">
                       Dr. {pres.doctorId?.name}
                     </p>
                   </div>
@@ -132,8 +122,8 @@ export default function PatientPrescriptions({
                 </div>
 
                 {/* Date */}
-                <div className="text-sm text-gray-600">
-                  <span className="font-medium text-gray-800 flex items-center gap-2">
+                <div className="text-sm">
+                  <span className="font-medium flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
                     Issued:
                   </span>
@@ -143,8 +133,8 @@ export default function PatientPrescriptions({
                 </div>
 
                 {/* Symptoms */}
-                <div className="text-sm text-gray-600">
-                  <span className="font-medium text-gray-800 flex items-center gap-2">
+                <div className="text-sm">
+                  <span className="font-medium flex items-center gap-2">
                     <FileText className="h-4 w-4" />
                     Symptoms:
                   </span>
@@ -152,8 +142,8 @@ export default function PatientPrescriptions({
                 </div>
 
                 {/* Bot Response */}
-                <div className="text-sm text-gray-700 prose prose-sm max-w-none bg-gray-50 rounded-md p-3">
-                  <span className="font-medium text-gray-800 flex items-center gap-2 mb-2">
+                <div className="text-sm  prose prose-sm max-w-none bg-muted rounded-md p-3">
+                  <span className="font-medium flex items-center gap-2 mb-2">
                     <FileText className="h-4 w-4" />
                     Assistant Analysis:
                   </span>
@@ -180,8 +170,8 @@ export default function PatientPrescriptions({
 
                 {/* Prescription Notes */}
                 {pres.prescriptionNotes && (
-                  <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-md p-3">
-                    <span className="font-medium text-gray-800 flex items-center gap-2">
+                  <div className="text-sm bg-muted border border-blue-200 rounded-md p-3">
+                    <span className="font-medium flex items-center gap-2">
                       <FileText className="h-4 w-4 text-blue-600" />
                       Doctor Notes:
                     </span>

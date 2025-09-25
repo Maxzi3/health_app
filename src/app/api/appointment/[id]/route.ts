@@ -1,16 +1,15 @@
-import { NextResponse } from "next/server";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { NextResponse, NextRequest } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Appointment from "@/models/Appointment.model";
 import User from "@/models/User";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/authOptions";
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+
+export async function PATCH(req: NextRequest, context:any) {
   try {
-    const { id } = await params; // 🔹 FIX 1: Await params
+    const { id } = (context as { params: { id: string } }).params;
 
     await connectDB();
     const session = await getServerSession(authOptions);
@@ -19,17 +18,13 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 🔹 FIX 2: Handle empty JSON body
-    const { status, appointmentNotes } =
-      (await req.json().catch(() => ({}))) || {};
+    const { status, appointmentNotes } = await req.json().catch(() => ({}));
 
-    // 🔹 Get user and role
     const user = await User.findById(session.user.id);
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // 🔹 Allowed statuses by role
     const doctorStatuses = ["COMPLETED", "CONFIRMED", "CANCELLED"];
     const patientStatuses = ["CANCELLED"];
 
@@ -43,7 +38,6 @@ export async function PATCH(
       );
     }
 
-    // 🔹 Update appointment
     const appointment = await Appointment.findByIdAndUpdate(
       id,
       {

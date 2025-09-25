@@ -39,12 +39,12 @@ export default function PendingPage() {
             </p>
           </div>
 
-          <div className="bg-foreground shadow rounded-lg p-6">
+          <div className="bg-muted shadow rounded-lg p-6">
             <div className="text-center">
-              <h3 className="text-lg font-medium text-secondary mb-4">
+              <h3 className="text-lg font-medium  mb-4">
                 Hello, Dr. {session?.user.name}
               </h3>
-              <div className="space-y-4 text-sm text-primary-foreground">
+              <div className="space-y-4 text-sm">
                 <p>
                   Thank you for completing your profile! Your account is
                   currently being reviewed by our admin team.

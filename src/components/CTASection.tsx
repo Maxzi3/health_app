@@ -31,8 +31,8 @@ const CTASection = () => {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
             <Button 
-              variant="cta" 
-              size="xl"
+              variant="default" 
+              size="lg"
               className="group shadow-strong"
               onClick={() => window.location.href = '/signup'}
             >
@@ -42,7 +42,7 @@ const CTASection = () => {
             
             <Button 
               variant="outline" 
-              size="xl"
+              size="lg"
               onClick={() => window.location.href = '/login'}
             >
               Already have an account? Log In

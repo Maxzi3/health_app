@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import Image from "next/image";
+// import Image from "next/image";
 
 const BlogSection = () => {
   const blogPosts = [
@@ -63,14 +63,14 @@ const BlogSection = () => {
               key={post.title}
               className="hover:shadow-lg transition-shadow"
             >
-              <div className="aspect-video overflow-hidden rounded-t-lg">
+              {/* <div className="aspect-video overflow-hidden rounded-t-lg">
                 <Image
                   src={post.image}
                   alt={post.title}
                   fill
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-              </div>
+              </div> */}
 
               <CardHeader>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">

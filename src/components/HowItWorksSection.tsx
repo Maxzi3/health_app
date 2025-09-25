@@ -18,9 +18,9 @@ const HowItWorksSection = () => {
     },
     {
       number: "03",
-      title: "Video Consult",
+      title: "Consultation",
       description:
-        "Connect securely for your virtual consultation with end-to-end encryption.",
+        "Connect securely and get either a Prescription or Book an Appointment with them ",
       color: "bg-trust-blue",
     },
   ];

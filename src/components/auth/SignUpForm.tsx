@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -10,156 +11,108 @@ import {
   Mail,
   Lock,
   User,
-  FileText,
   Eye,
   EyeOff,
-  Upload,
-  CheckCircle,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import GoogleOAuthButton from "./GoogleOAuthButton";
-import OTPVerification from "./OTPVerification";
-import Logo from "../Logo";
-import ThemeToggle from "../ThemeToggle";
+import { toast } from "react-hot-toast";
+import GoogleOAuthButton from "@/components/auth/GoogleOAuthButton";
+import OTPVerification from "@/components/auth/OTPVerification";
+import Logo from "@/components/Logo";
+import ThemeToggle from "@/components/ThemeToggle";
 import { signIn } from "next-auth/react";
 
 const signUpSchema = z
   .object({
-    role: z.enum(["PATIENT", "DOCTOR"]),
-    fullName: z.string().min(1, "Full name is required"),
+    name: z.string().min(1, "Full name is required"),
     email: z.string().email("Please enter a valid email"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string(),
-    specialization: z.string().optional(),
-    licenseFile: z.instanceof(File).optional().or(z.null()),
+    role: z.enum(["PATIENT", "DOCTOR"]),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
-  })
-  .refine((data) => data.role === "PATIENT" || !!data.specialization, {
-    message: "Specialization is required for doctors",
-    path: ["specialization"],
-  })
-  .refine(
-    (data) =>
-      data.role === "PATIENT" ||
-      (data.licenseFile &&
-        ["application/pdf", "image/jpeg", "image/png"].includes(
-          data.licenseFile.type
-        ) &&
-        data.licenseFile.size <= 5 * 1024 * 1024),
-    {
-      message: "License file is required for doctors (PDF, JPG, PNG, max 5MB)",
-      path: ["licenseFile"],
-    }
-  );
+  });
 
 type SignUpFormData = z.infer<typeof signUpSchema>;
 
-interface SignUpFormProps {
-  role: "PATIENT" | "DOCTOR";
-}
-
-const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
+export default function SignupForm() {
   const router = useRouter();
-  const [step, setStep] = useState<"form" | "otp" | "pending">("form");
+  const [step, setStep] = useState<"role" | "form" | "otp">("role");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [otpEmail, setOtpEmail] = useState<string | null>(null);
-  const [formStatus, setFormStatus] = useState<{
-    type: "success" | "error" | "";
-    message: string;
-  }>({ type: "", message: "" });
+  const [googleLoading, setGoogleLoading] = useState<
+    "PATIENT" | "DOCTOR" | null
+  >(null);
 
   const {
     register,
     handleSubmit,
     setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { role },
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      role: "PATIENT",
+    },
   });
 
+  const handleRoleSelect = (role: "PATIENT" | "DOCTOR") => {
+    setValue("role", role);
+    setStep("form");
+  };
+
+  const handleGoogleSignup = async (role: "PATIENT" | "DOCTOR") => {
+    setGoogleLoading(role);
+    document.cookie = `intended-role=${role}; path=/; max-age=3600`;
+    await signIn("google", {
+      callbackUrl: "/auth/redirect-handler",
+    });
+    setGoogleLoading(null);
+  };
+
   const onBack = () => router.push("/");
+
   const onSwitchToLogin = () => router.push("/auth/login");
 
   const onSubmit = async (data: SignUpFormData) => {
     try {
-      const formData = new FormData();
-      formData.append("name", data.fullName);
-      formData.append("email", data.email);
-      formData.append("password", data.password);
-      formData.append("role", data.role);
-
-      if (data.role === "DOCTOR") {
-        if (data.specialization) {
-          formData.append("specialization", data.specialization);
-        }
-        if (data.licenseFile) {
-          formData.append("cv", data.licenseFile);
-        }
-      }
-
       const response = await fetch("/api/auth/signup", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
       });
 
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || "Signup failed");
+        throw new Error(result.message || "Signup failed");
       }
 
-      setFormStatus({
-        type: "success",
-        message: result.message || "Account created successfully!",
-      });
-      setOtpEmail(data.email);
-
+      toast.success(result.message || "Account created successfully!");
       setTimeout(() => {
-        setFormStatus({ type: "", message: "" });
         setStep("otp");
       }, 2000);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      setFormStatus({
-        type: "error",
-        message: err.message || "Something went wrong",
-      });
+      toast.error(err.message || "Something went wrong");
     }
   };
 
-  const handleOTPVerified = () => {
-    if (role === "DOCTOR") {
-      setStep("pending");
-    } else {
-      router.push("/auth/login");
-    }
+  const handleOtpVerified = () => {
+    toast.success("Email verified Please log in to continue");
+    router.replace("/auth/login");
   };
 
-  const handleGoogleAuth = (role: "PATIENT" | "DOCTOR") => {
-    document.cookie = `intended-role=${role}; path=/; max-age=300`;
-    signIn("google", {
-      callbackUrl: role === "DOCTOR" ? "/auth/complete-profile" : "/bot",
-    });
-  };
-
-  if (step === "otp" && otpEmail) {
-    return (
-      <OTPVerification
-        email={otpEmail}
-        onVerified={handleOTPVerified}
-        onBack={() => setStep("form")}
-      />
-    );
-  }
-
-  if (step === "pending") {
+  if (step === "role") {
     return (
       <>
         <div className="flex items-center justify-between p-2">
@@ -174,94 +127,96 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
           <ThemeToggle />
         </div>
         <div className="min-h-screen flex items-center justify-center p-4">
-          <Card className="card-medical p-8 w-full max-w-md text-center animate-fade-in">
-            <div className="p-4 bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-2xl w-fit mx-auto mb-6">
-              <FileText className="h-12 w-12 text-secondary" />
-            </div>
-
-            <h2 className="text-2xl font-bold text-foreground mb-4">
-              Account Under Review
-            </h2>
-            <p className="text-muted-foreground mb-6 leading-relaxed">
-              Thank you for registering as a healthcare professional. Your
-              account and credentials are under review. You will receive an
-              email notification once approved by our admin team.
-            </p>
-
-            <div className="bg-accent p-4 rounded-lg mb-6">
-              <p className="text-sm text-muted-foreground">
-                Email verified
-                <br />
-                🔍 Credentials under review
-                <br />
-                📧 Approval notification pending
+          <Card className="card-medical p-8 w-full max-w-md animate-fade-in">
+            <div className="text-center mb-8">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <Logo />
+              </div>
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                Choose Your Role
+              </h2>
+              <p className="text-muted-foreground">
+                Select how you want to join
               </p>
             </div>
 
-            <Button
-              onClick={onBack}
-              variant="outline"
-              className="w-full focus-visible-ring"
-            >
-              Back to Home
-            </Button>
+            <div className="space-y-4">
+              <Button
+                onClick={() => handleRoleSelect("PATIENT")}
+                className="w-full btn-primary focus-visible-ring"
+              >
+                Join as Patient
+              </Button>
+              <Button
+                onClick={() => handleRoleSelect("DOCTOR")}
+                variant="outline"
+                className="w-full focus-visible-ring"
+              >
+                Join as Doctor
+              </Button>
+            </div>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">
+                  Or continue with Google
+                </span>
+              </div>
+            </div>
+
+            <GoogleOAuthButton
+              onClick={() => handleGoogleSignup("PATIENT")}
+              text="Sign up as Patient with Google"
+              className="w-full"
+              loading={googleLoading === "PATIENT"}
+            />
+
+            <GoogleOAuthButton
+              onClick={() => handleGoogleSignup("DOCTOR")}
+              text="Sign up as Doctor with Google"
+              className="w-full"
+              loading={googleLoading === "DOCTOR"}
+            />
           </Card>
         </div>
       </>
     );
   }
 
-  return (
-    <>
-      <div className="flex items-center justify-between p-2">
-        <Button
-          onClick={onBack}
-          variant="ghost"
-          className="mb-0 text-muted-foreground hover:text-foreground focus-visible-ring"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
-        <ThemeToggle />
-      </div>
-
-      <div className="min-h-screen flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-md animate-fade-in">
-          <Card className="card-medical p-8">
+  if (step === "form") {
+    return (
+      <>
+        <div className="flex items-center justify-between p-2">
+          <Button
+            onClick={() => setStep("role")}
+            variant="ghost"
+            className="mb-0 text-muted-foreground hover:text-foreground focus-visible-ring"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to role selection
+          </Button>
+          <ThemeToggle />
+        </div>
+        <div className="min-h-screen flex items-center justify-center px-4 py-8">
+          <Card className="card-medical p-8 w-full max-w-md animate-fade-in">
             <div className="text-center mb-8">
               <div className="flex items-center justify-center gap-3 mb-4">
                 <Logo />
               </div>
               <h2 className="text-2xl font-bold text-foreground mb-2">
-                {role === "PATIENT"
-                  ? "Join Your Health Journey"
-                  : "Join Our Medical Network"}
+                Create Your {getValues("role").toLowerCase()} Account
               </h2>
               <p className="text-muted-foreground">
-                Create your {role.toLowerCase()} account to get started
+                Get started with your {getValues("role").toLowerCase()} account
               </p>
             </div>
 
-            {formStatus.type === "success" && (
-              <div className="text-center mb-6">
-                <p className="text-sm text-green-500 font-medium flex items-center justify-center gap-1">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  {formStatus.message}
-                </p>
-              </div>
-            )}
-
-            {formStatus.type === "error" && (
-              <div className="text-center mb-6">
-                <p className="text-sm text-destructive font-medium">
-                  {formStatus.message}
-                </p>
-              </div>
-            )}
-
             <GoogleOAuthButton
-              onClick={() => handleGoogleAuth(role)}
-              text={`Sign up with Google as ${role.toLowerCase()}`}
+              onClick={() => handleGoogleSignup(getValues("role"))}
+              text={`Sign up with Google as ${getValues("role").toLowerCase()}`}
               className="w-full mb-6"
             />
 
@@ -278,25 +233,23 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="name">Full Name</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
                   <Input
-                    id="fullName"
+                    id="name"
                     placeholder="Enter your full name"
-                    {...register("fullName")}
+                    {...register("name")}
                     className={`pl-10 ${
-                      errors.fullName ? "border-destructive" : ""
+                      errors.name ? "border-destructive" : ""
                     }`}
-                    aria-invalid={!!errors.fullName}
-                    aria-describedby={
-                      errors.fullName ? "fullName-error" : undefined
-                    }
+                    aria-invalid={!!errors.name}
+                    aria-describedby={errors.name ? "name-error" : undefined}
                   />
                 </div>
-                {errors.fullName && (
-                  <p id="fullName-error" className="text-sm text-destructive">
-                    {errors.fullName.message}
+                {errors.name && (
+                  <p id="name-error" className="text-sm text-destructive">
+                    {errors.name.message}
                   </p>
                 )}
               </div>
@@ -401,70 +354,6 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
                 )}
               </div>
 
-              {role === "DOCTOR" && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="specialization">Specialization</Label>
-                    <Input
-                      id="specialization"
-                      placeholder="e.g., Cardiologist"
-                      {...register("specialization")}
-                      className={
-                        errors.specialization ? "border-destructive" : ""
-                      }
-                      aria-invalid={!!errors.specialization}
-                      aria-describedby={
-                        errors.specialization
-                          ? "specialization-error"
-                          : undefined
-                      }
-                    />
-                    {errors.specialization && (
-                      <p
-                        id="specialization-error"
-                        className="text-sm text-destructive"
-                      >
-                        {errors.specialization.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="licenseFile">
-                      Medical License Certificate
-                    </Label>
-                    <div className="relative">
-                      <Upload className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                      <Input
-                        id="licenseFile"
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(e) => {
-                          if (e.target.files?.[0]) {
-                            setValue("licenseFile", e.target.files[0]);
-                          }
-                        }}
-                        className={`pl-10 file:mr-4 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 ${
-                          errors.licenseFile ? "border-destructive" : ""
-                        }`}
-                        aria-invalid={!!errors.licenseFile}
-                        aria-describedby={
-                          errors.licenseFile ? "licenseFile-error" : undefined
-                        }
-                      />
-                    </div>
-                    {errors.licenseFile && (
-                      <p
-                        id="licenseFile-error"
-                        className="text-sm text-destructive"
-                      >
-                        {errors.licenseFile.message}
-                      </p>
-                    )}
-                  </div>
-                </>
-              )}
-
               <Button
                 type="submit"
                 disabled={isSubmitting}
@@ -472,8 +361,7 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
               >
                 {isSubmitting ? (
                   <>
-                    <div className="loading-pulse w-4 h-4 rounded mr-2"></div>
-                    Creating Account...
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   </>
                 ) : (
                   "Create Account"
@@ -500,9 +388,19 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ role }) => {
             </div>
           </Card>
         </div>
-      </div>
-    </>
-  );
-};
+      </>
+    );
+  }
 
-export default SignUpForm;
+  if (step === "otp") {
+    return (
+      <OTPVerification
+        email={getValues("email")}
+        onVerified={handleOtpVerified}
+        onBack={() => setStep("form")}
+      />
+    );
+  }
+
+  return null;
+}

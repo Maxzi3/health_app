@@ -43,7 +43,6 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
   }, [timeLeft]);
 
   const {
-    register,
     handleSubmit,
     setValue,
     watch,

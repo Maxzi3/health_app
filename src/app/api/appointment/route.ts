@@ -6,7 +6,8 @@ import Conversation from "@/models/Conversation.model";
 import User from "@/models/User";
 import mongoose from "mongoose";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/authOptions";
+
 
 export async function POST(req: Request) {
   try {
@@ -108,7 +109,7 @@ export async function POST(req: Request) {
       scheduledAt.setHours(hours, minutes, 0, 0);
 
       if (isNaN(scheduledAt.getTime())) throw new Error("Invalid date or time");
-    } catch (e) {
+    } catch  {
       return NextResponse.json(
         {
           error:

@@ -2,14 +2,12 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
-import { authOptions } from "../[...nextauth]/route";
+
 import { notifyAdminDoctorSignup } from "@/lib/email";
-import mongoose from "mongoose";
+import { authOptions } from "@/lib/authOptions";
 
 export async function POST(request: Request) {
   try {
-    mongoose.set("debug", true);
-
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
@@ -55,7 +53,12 @@ export async function POST(request: Request) {
 
     // Uncomment when ready to test email
     const attachments = cvFile
-      ? [{ filename: cvFile.name, content: Buffer.from(await cvFile.arrayBuffer()) }]
+      ? [
+          {
+            filename: cvFile.name,
+            content: Buffer.from(await cvFile.arrayBuffer()),
+          },
+        ]
       : [];
     await notifyAdminDoctorSignup({
       name: updatedUser.name,
@@ -63,13 +66,12 @@ export async function POST(request: Request) {
       specialization,
       attachments,
     });
-    
 
     return NextResponse.json(
       { message: "Profile completed successfully" },
       { status: 200 }
     );
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error("Complete profile error:", error);
     return NextResponse.json(

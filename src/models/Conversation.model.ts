@@ -25,6 +25,14 @@ const ConversationSchema: Schema<IConversation> = new Schema(
   {
     patientId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     messages: [MessageSchema],
+    dailyMessageCount: {
+      type: Number,
+      default: 0,
+    },
+    lastMessageDate: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );

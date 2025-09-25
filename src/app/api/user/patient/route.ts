@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 import Appointment from "@/models/Appointment.model";
 import Prescription from "@/models/Prescription.model";
 import { Types } from "mongoose";
+import { authOptions } from "@/lib/authOptions";
 
 export async function GET() {
   try {

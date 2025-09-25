@@ -12,9 +12,55 @@ const nunitoSans = Nunito_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Medify - Your AI Healthcare Assistant",
+  title: {
+    default: "Medify - Your AI Healthcare Assistant",
+    template: "%s | Medify",
+  },
   description:
     "Revolutionizing healthcare with AI-driven solutions for personalized, accessible, and secure health management.",
+  keywords: [
+    "healthcare",
+    "AI healthcare",
+    "telemedicine",
+    "digital health",
+    "medical assistant",
+    "patient care",
+  ],
+  authors: [{ name: "Medify Team" }],
+  creator: "Medify",
+  publisher: "Medify",
+  metadataBase: new URL("https://www.medify.vercel.app"), // replace with your live domain
+  openGraph: {
+    title: "Medify - Your AI Healthcare Assistant",
+    description:
+      "Revolutionizing healthcare with AI-driven solutions for personalized, accessible, and secure health management.",
+    url: "https://www.medify.vercel.app",
+    siteName: "Medify",
+    images: [
+      {
+        url: "/images/Medifyog.png", // replace with your image
+        width: 1200,
+        height: 630,
+        alt: "Medify Healthcare Assistant",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Medify - Your AI Healthcare Assistant",
+    description:
+      "Revolutionizing healthcare with AI-driven solutions for personalized, accessible, and secure health management.",
+    images: ["/images/Medifyog.png"],
+    creator: "@dev_maxzi",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon-16x16.png",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({
@@ -24,7 +70,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      {/*  switched className */}
       <body className={`${nunitoSans.className} antialiased`}>
         <Providers>{children}</Providers>
         <Toaster position="top-right" toastOptions={{ duration: 4000 }} />

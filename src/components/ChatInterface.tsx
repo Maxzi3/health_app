@@ -28,7 +28,7 @@ const initialBotMessage: Message = {
 };
 
 export default function ChatInterface() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const [messages, setMessages] = useState<Message[]>([]); // start empty, we'll load from init
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -185,7 +185,7 @@ export default function ChatInterface() {
       });
     }
 
-    // call assistant (keep current behavior)
+    // call assistant
     try {
       const res = await fetch("/api/assistant", {
         method: "POST",
@@ -205,10 +205,27 @@ export default function ChatInterface() {
 
       if (!res.ok) {
         console.error("Assistant API error:", data.error);
+
+        // ✅ check for chat limit error
+        if (data.error?.toLowerCase().includes("limit")) {
+          setError(
+            "You’ve reached your daily chat limit. Please try again tomorrow."
+          );
+          const errorMessage: Message = {
+            id: uuidv4(),
+            text: "⚠️ You’ve reached your daily chat limit. Please try again tomorrow.",
+            sender: "BOT",
+            timestamp: new Date(),
+            botResponse: "",
+          };
+          setMessages((prev) => [...prev, errorMessage]);
+          return;
+        }
+
         throw new Error(data.error || "Something went wrong");
       }
 
-      // if assistant creates/returns a conversationId, keep it
+      // ✅ continue with bot message if successful
       if (data.conversationId && data.conversationId !== conversationId) {
         setConversationId(data.conversationId);
       }

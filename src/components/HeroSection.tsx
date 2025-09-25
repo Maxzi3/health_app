@@ -37,7 +37,7 @@ const HeroSection = () => {
           {/* Subtitle */}
           <p className="text-lg md:text-lg lg:text-xl text-gray-100 max-w-2xl mx-auto animate-fade-in">
             Connect with healthcare professionals instantly through our
-            AI-powered triage system and secure video consultations.
+            AI-powered triage system and secure consultations.
           </p>
 
           {/* CTA Buttons */}
