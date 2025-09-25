@@ -75,6 +75,7 @@ export async function notifyAdminDoctorSignup(details: {
   name: string;
   email: string;
   specialization?: string;
+  licenseNumber:string;
   attachments?: Attachment[];
 }) {
   return sendEmail(

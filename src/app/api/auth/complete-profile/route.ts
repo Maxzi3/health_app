@@ -57,6 +57,7 @@ export async function POST(request: Request) {
     await notifyAdminDoctorSignup({
       name: updatedUser.name,
       email: updatedUser.email,
+      licenseNumber,
       specialization,
       attachments,
     });
