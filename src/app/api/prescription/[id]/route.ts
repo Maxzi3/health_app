@@ -50,7 +50,7 @@ export async function PATCH(req: Request, context: any) {
     if (isDoctor) {
       updatedPrescription = await Prescription.findByIdAndUpdate(
         id,
-        { ...body }, // Doctors can change other fields like notes
+        { status: "ACTIVE" }, 
         { new: true }
       );
     } else if (isOwner && body.status === "COMPLETED") {

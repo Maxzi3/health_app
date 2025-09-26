@@ -1,5 +1,6 @@
 "use client";
 
+import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -14,26 +15,17 @@ import {
 import Image from "next/image";
 
 export default function AboutPage() {
+  
   const team = [
     {
-      name: "Dr. Jane Thompson",
+      name: "Dr. Aproko",
       role: "Chief Medical Officer",
       image: "/images/team1.jpg",
     },
     {
-      name: "David Li",
+      name: "Dr. Obisike Maxwell",
       role: "Head of Engineering",
       image: "/images/team2.jpg",
-    },
-    {
-      name: "Amira Khan",
-      role: "Lead Product Designer",
-      image: "/images/team3.jpg",
-    },
-    {
-      name: "Michael Brown",
-      role: "AI Research Lead",
-      image: "/images/team4.jpg",
     },
   ];
 
@@ -138,13 +130,13 @@ export default function AboutPage() {
                   className="shadow-soft hover:shadow-medium transition-shadow"
                 >
                   <CardContent className="p-6 flex flex-col items-center space-y-4">
-                    <Image
+                    {/* <Image
                       src={member.image}
                       alt={member.name}
                       width={150}
                       height={150}
                       className="rounded-full object-cover border-4 border-primary/20"
-                    />
+                    /> */}
                     <div>
                       <p className="font-semibold text-lg">{member.name}</p>
                       <p className="text-muted-foreground">{member.role}</p>
@@ -173,18 +165,7 @@ export default function AboutPage() {
         </section>
 
         {/* CTA */}
-        <section className="py-20 bg-primary text-background text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Ready to experience better healthcare?
-          </h2>
-          <Button
-            size="lg"
-            variant="secondary"
-            className="bg-background text-primary hover:bg-background/90"
-          >
-            Create Your Account
-          </Button>
-        </section>
+        <CTASection />
         <Footer />
       </main>
     </>

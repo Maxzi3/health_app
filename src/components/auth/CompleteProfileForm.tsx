@@ -22,12 +22,25 @@ const profileSchema = z.object({
   experience: z
     .string()
     .regex(/^\d+$/, "Please enter a valid number of years")
-    .optional(),
-  bio: z.string().optional(),
+    .min(1, "Experience is required"),
+  bio: z.string().min(20, "Bio must be at least 20 characters long"),
   cv: z
-    .instanceof(File, { message: "Please upload a CV (PDF or DOC)" })
-    .optional(),
+    .any()
+    .refine((file) => file instanceof File, {
+      message: "Please upload a CV (PDF or DOC)",
+    })
+    .refine(
+      (file) =>
+        file &&
+        [
+          "application/pdf",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ].includes(file.type),
+      { message: "Only PDF, DOC, or DOCX files are allowed" }
+    ),
 });
+
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
@@ -199,7 +212,7 @@ export default function CompleteProfileForm() {
 
               {/* Error message */}
               {errors.cv && (
-                <p className="text-sm text-destructive">{errors.cv.message}</p>
+                <p className="text-sm text-destructive">{errors.cv?.message?.toString() || "Invalid CV upload"}</p>
               )}
             </div>
 

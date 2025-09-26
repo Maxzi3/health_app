@@ -73,7 +73,7 @@ const ChatNavbar = () => {
       console.log("Delete response:", data);
 
       // After successful delete → sign out
-      await signOut({ callbackUrl: "/auth/signup", redirect: true });
+      await signOut({ callbackUrl: "/auth/login", redirect: true });
     } catch (error) {
       console.error("Delete account error:", error);
     } finally {

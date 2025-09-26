@@ -3,25 +3,31 @@ import { ArrowLeft, UserCheck, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
-import ThemeToggle from "@/components/ThemeToggle";
+import ThemeToggle from "../ThemeToggle";
+import Logo from "../Logo";
 
 const RoleSelection = () => {
   const router = useRouter();
+
+  const selectRole = (role: "PATIENT" | "DOCTOR") => {
+    router.push(`/auth/signup?role=${role}`);
+  };
   return (
     <>
       <div className="flex items-center justify-between p-2">
-        {/* Back Button */}
-        <Button
-          onClick={() => router.push("/")}
-          variant="ghost"
-          className="mb-0 text-muted-foreground hover:text-foreground focus-visible-ring"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Home
-        </Button>
+        <Logo />
         <ThemeToggle />
       </div>
-      <div className="min-h-screen  flex items-center justify-center px-4">
+      {/* Back Button */}
+      <Button
+        onClick={() => router.push("/")}
+        variant="ghost"
+        className="mb-8 text-muted-foreground hover:text-foreground focus-visible-ring "
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Home
+      </Button>
+      <div className="min-h-screen flex items-center justify-center px-4">
         <div className="w-full max-w-2xl animate-fade-in">
           {/* Header */}
           <div className="text-center mb-12">
@@ -37,7 +43,7 @@ const RoleSelection = () => {
           <div className="grid md:grid-cols-2 gap-6">
             <Card
               className="card-medical p-8 cursor-pointer group hover:-translate-y-2 transition-all duration-300"
-              onClick={() => router.push("/auth/signup/patient")}
+              onClick={() => selectRole("PATIENT")}
             >
               <div className="text-center">
                 <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl w-fit mx-auto mb-6 group-hover:scale-110 transition-transform">
@@ -71,7 +77,7 @@ const RoleSelection = () => {
 
             <Card
               className="card-medical p-8 cursor-pointer group hover:-translate-y-2 transition-all duration-300"
-              onClick={() => router.push("/auth/signup/doctor")}
+              onClick={() => selectRole("DOCTOR")}
             >
               <div className="text-center">
                 <div className="p-4 bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-2xl w-fit mx-auto mb-6 group-hover:scale-110 transition-transform">
@@ -88,15 +94,15 @@ const RoleSelection = () => {
 
                 <div className="space-y-2 text-sm text-muted-foreground text-left">
                   <div className="flex items-center">
-                    <div className="w-1.5 h-1.5 bg-secondary rounded-full mr-3"></div>
-                    Conduct secure video consultations
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full mr-3"></div>
+                    Conduct secure consultations
                   </div>
                   <div className="flex items-center">
-                    <div className="w-1.5 h-1.5 bg-secondary rounded-full mr-3"></div>
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full mr-3"></div>
                     Manage patient appointments
                   </div>
                   <div className="flex items-center">
-                    <div className="w-1.5 h-1.5 bg-secondary rounded-full mr-3"></div>
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full mr-3"></div>
                     Access comprehensive patient data
                   </div>
                 </div>

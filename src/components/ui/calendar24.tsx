@@ -11,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import toast from "react-hot-toast";
 
 interface Calendar24Props {
   date: Date | undefined;
@@ -22,8 +23,25 @@ interface Calendar24Props {
 export function Calendar24({ date, setDate, time, setTime }: Calendar24Props) {
   const [open, setOpen] = React.useState(false);
 
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedTime = e.target.value; // "HH:mm:ss"
+    if (date) {
+      const now = new Date();
+      const chosen = new Date(date);
+      const [h, m, s] = selectedTime.split(":").map(Number);
+      chosen.setHours(h, m, s || 0);
+
+      if (chosen < now) {
+        toast.error("You cannot pick a past time today.");
+        return;
+      }
+    }
+    setTime(selectedTime);
+  };
+
+
   return (
-    <div className="flex gap-4">
+    <div className="flex gap-4 flex-col sm:flex-row">
       <div className="flex flex-col gap-3">
         <Label htmlFor="date-picker" className="px-1">
           Date
@@ -44,6 +62,7 @@ export function Calendar24({ date, setDate, time, setTime }: Calendar24Props) {
               mode="single"
               selected={date}
               captionLayout="dropdown"
+              disabled={{ before: new Date() }}
               onSelect={(d) => {
                 setDate(d);
                 setOpen(false);
@@ -61,7 +80,7 @@ export function Calendar24({ date, setDate, time, setTime }: Calendar24Props) {
           id="time-picker"
           step="1"
           value={time}
-          onChange={(e) => setTime(e.target.value)}
+          onChange={handleTimeChange}
           className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
         />
       </div>

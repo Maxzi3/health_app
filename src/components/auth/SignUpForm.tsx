@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Mail,
@@ -43,7 +43,11 @@ type SignUpFormData = z.infer<typeof signUpSchema>;
 
 export default function SignupForm() {
   const router = useRouter();
-  const [step, setStep] = useState<"role" | "form" | "otp">("role");
+  const searchParams = useSearchParams();
+  const roleParam =
+    (searchParams.get("role") as "PATIENT" | "DOCTOR") || "PATIENT";
+
+  const [step, setStep] = useState<"form" | "otp">("form");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState<
@@ -63,25 +67,23 @@ export default function SignupForm() {
       email: "",
       password: "",
       confirmPassword: "",
-      role: "PATIENT",
+      role: roleParam,
     },
   });
 
-  const handleRoleSelect = (role: "PATIENT" | "DOCTOR") => {
-    setValue("role", role);
-    setStep("form");
-  };
+  // sync role with URL param
+  useEffect(() => {
+    setValue("role", roleParam);
+  }, [roleParam, setValue]);
 
-  const handleGoogleSignup = async (role: "PATIENT" | "DOCTOR") => {
-    setGoogleLoading(role);
-    document.cookie = `intended-role=${role}; path=/; max-age=3600`;
-    await signIn("google", {
-      callbackUrl: "/auth/redirect-handler",
-    });
+  const handleGoogleSignup = async () => {
+    setGoogleLoading(roleParam);
+    document.cookie = `intended-role=${roleParam}; path=/; max-age=3600`;
+    await signIn("google", { callbackUrl: "/auth/redirect-handler" });
     setGoogleLoading(null);
   };
 
-  const onBack = () => router.push("/");
+  const onBack = () => router.back();
 
   const onSwitchToLogin = () => router.push("/auth/login");
 
@@ -99,9 +101,7 @@ export default function SignupForm() {
       }
 
       toast.success(result.message || "Account created successfully!");
-      setTimeout(() => {
-        setStep("otp");
-      }, 2000);
+      setTimeout(() => setStep("otp"), 2000);
     } catch (err: any) {
       toast.error(err.message || "Something went wrong");
     }
@@ -112,7 +112,7 @@ export default function SignupForm() {
     router.replace("/auth/login");
   };
 
-  if (step === "role") {
+  if (step === "form") {
     return (
       <>
         <div className="flex items-center justify-between p-2">
@@ -126,80 +126,6 @@ export default function SignupForm() {
           </Button>
           <ThemeToggle />
         </div>
-        <div className="min-h-screen flex items-center justify-center p-4">
-          <Card className="card-medical p-8 w-full max-w-md animate-fade-in">
-            <div className="text-center mb-8">
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <Logo />
-              </div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">
-                Choose Your Role
-              </h2>
-              <p className="text-muted-foreground">
-                Select how you want to join
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <Button
-                onClick={() => handleRoleSelect("PATIENT")}
-                className="w-full btn-primary focus-visible-ring"
-              >
-                Join as Patient
-              </Button>
-              <Button
-                onClick={() => handleRoleSelect("DOCTOR")}
-                variant="outline"
-                className="w-full focus-visible-ring"
-              >
-                Join as Doctor
-              </Button>
-            </div>
-
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">
-                  Or continue with Google
-                </span>
-              </div>
-            </div>
-
-            <GoogleOAuthButton
-              onClick={() => handleGoogleSignup("PATIENT")}
-              text="Sign up as Patient with Google"
-              className="w-full"
-              loading={googleLoading === "PATIENT"}
-            />
-
-            <GoogleOAuthButton
-              onClick={() => handleGoogleSignup("DOCTOR")}
-              text="Sign up as Doctor with Google"
-              className="w-full"
-              loading={googleLoading === "DOCTOR"}
-            />
-          </Card>
-        </div>
-      </>
-    );
-  }
-
-  if (step === "form") {
-    return (
-      <>
-        <div className="flex items-center justify-between p-2">
-          <Button
-            onClick={() => setStep("role")}
-            variant="ghost"
-            className="mb-0 text-muted-foreground hover:text-foreground focus-visible-ring"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to role selection
-          </Button>
-          <ThemeToggle />
-        </div>
         <div className="min-h-screen flex items-center justify-center px-4 py-8">
           <Card className="card-medical p-8 w-full max-w-md animate-fade-in">
             <div className="text-center mb-8">
@@ -207,17 +133,18 @@ export default function SignupForm() {
                 <Logo />
               </div>
               <h2 className="text-2xl font-bold text-foreground mb-2">
-                Create Your {getValues("role").toLowerCase()} Account
+                Create Your {roleParam.toLowerCase()} Account
               </h2>
               <p className="text-muted-foreground">
-                Get started with your {getValues("role").toLowerCase()} account
+                Get started with your {roleParam.toLowerCase()} account
               </p>
             </div>
 
             <GoogleOAuthButton
-              onClick={() => handleGoogleSignup(getValues("role"))}
-              text={`Sign up with Google as ${getValues("role").toLowerCase()}`}
+              onClick={handleGoogleSignup}
+              text={`Sign up with Google as ${roleParam.toLowerCase()}`}
               className="w-full mb-6"
+              loading={googleLoading === roleParam}
             />
 
             <div className="relative mb-6">
@@ -232,6 +159,8 @@ export default function SignupForm() {
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <input type="hidden" value={roleParam} {...register("role")} />
+
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <div className="relative">
@@ -243,12 +172,10 @@ export default function SignupForm() {
                     className={`pl-10 ${
                       errors.name ? "border-destructive" : ""
                     }`}
-                    aria-invalid={!!errors.name}
-                    aria-describedby={errors.name ? "name-error" : undefined}
                   />
                 </div>
                 {errors.name && (
-                  <p id="name-error" className="text-sm text-destructive">
+                  <p className="text-sm text-destructive">
                     {errors.name.message}
                   </p>
                 )}
@@ -266,12 +193,10 @@ export default function SignupForm() {
                     className={`pl-10 ${
                       errors.email ? "border-destructive" : ""
                     }`}
-                    aria-invalid={!!errors.email}
-                    aria-describedby={errors.email ? "email-error" : undefined}
                   />
                 </div>
                 {errors.email && (
-                  <p id="email-error" className="text-sm text-destructive">
+                  <p className="text-sm text-destructive">
                     {errors.email.message}
                   </p>
                 )}
@@ -289,10 +214,6 @@ export default function SignupForm() {
                     className={`pl-10 pr-10 ${
                       errors.password ? "border-destructive" : ""
                     }`}
-                    aria-invalid={!!errors.password}
-                    aria-describedby={
-                      errors.password ? "password-error" : undefined
-                    }
                   />
                   <button
                     type="button"
@@ -307,7 +228,7 @@ export default function SignupForm() {
                   </button>
                 </div>
                 {errors.password && (
-                  <p id="password-error" className="text-sm text-destructive">
+                  <p className="text-sm text-destructive">
                     {errors.password.message}
                   </p>
                 )}
@@ -325,12 +246,6 @@ export default function SignupForm() {
                     className={`pl-10 pr-10 ${
                       errors.confirmPassword ? "border-destructive" : ""
                     }`}
-                    aria-invalid={!!errors.confirmPassword}
-                    aria-describedby={
-                      errors.confirmPassword
-                        ? "confirmPassword-error"
-                        : undefined
-                    }
                   />
                   <button
                     type="button"
@@ -345,10 +260,7 @@ export default function SignupForm() {
                   </button>
                 </div>
                 {errors.confirmPassword && (
-                  <p
-                    id="confirmPassword-error"
-                    className="text-sm text-destructive"
-                  >
+                  <p className="text-sm text-destructive">
                     {errors.confirmPassword.message}
                   </p>
                 )}
@@ -360,9 +272,7 @@ export default function SignupForm() {
                 className="btn-primary w-full mt-6 focus-visible-ring"
               >
                 {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </>
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   "Create Account"
                 )}

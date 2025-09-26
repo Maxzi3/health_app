@@ -314,7 +314,7 @@ const MessageItem = React.memo(
           open={openAppointmentModal}
           onOpenChange={setOpenAppointmentModal}
         >
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>
                 Book Appointment with {selectedDoctor?.name}
@@ -368,13 +368,13 @@ const MessageItem = React.memo(
           open={openPrescriptionModal}
           onOpenChange={setOpenPrescriptionModal}
         >
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>
                 Request Prescription from {selectedDoctor?.name}
               </DialogTitle>
             </DialogHeader>
-            <div className="py-4">
+            <div className="py-2">
               <p className="text-sm text-muted-foreground">
                 This will send your symptoms and chat conversation to the doctor
                 for review. They will provide a prescription if medically

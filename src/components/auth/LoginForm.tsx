@@ -89,7 +89,7 @@ export default function LoginForm() {
   };
 
   const onBack = () => router.push("/");
-  const onSwitchToSignUp = () => router.push("/auth/signup");
+  const onSwitchToSignUp = () => router.push("/auth/select-role");
   const onSwitchToForgetPassword = () => router.push("/auth/forgot-password");
 
   if (step === "otp" && otpEmail) {
@@ -139,16 +139,9 @@ export default function LoginForm() {
           <div className="space-y-4">
             <GoogleOAuthButton
               onClick={() => handleGoogleSignIn("PATIENT")}
-              text="Sign in as Patient with Google"
+              text="Continue with Google"
               className="w-full"
-              loading={googleLoading === "PATIENT"}
-            />
-
-            <GoogleOAuthButton
-              onClick={() => handleGoogleSignIn("DOCTOR")}
-              text="Sign in as Doctor with Google"
-              className="w-full"
-              loading={googleLoading === "DOCTOR"}
+              loading={googleLoading !== null}
             />
           </div>
 

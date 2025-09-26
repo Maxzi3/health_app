@@ -135,7 +135,8 @@ export default withAuth(
       // 🚫 Prevent authenticated users from accessing login/signup
       if (
         pathname.startsWith("/auth/login") ||
-        pathname.startsWith("/auth/signup")
+        pathname.startsWith("/auth/signup") ||
+        pathname.startsWith("/auth/select-role")
       ) {
         if (role === "PATIENT") {
           const redirectResponse = NextResponse.redirect(
@@ -187,6 +188,7 @@ export default withAuth(
         if (
           pathname.startsWith("/auth/") ||
           pathname === "/" ||
+          pathname === "/about" ||
           pathname.startsWith("/api/auth/") ||
           pathname.startsWith("/_next/") ||
           pathname === "/favicon.ico" ||
