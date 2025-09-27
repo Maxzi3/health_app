@@ -246,6 +246,9 @@ export default function DoctorDashboard() {
                       onEdit={(prescription) =>
                         setSelectedPrescription(prescription)
                       }
+                      refresh={() =>
+                        Promise.all([fetchPrescriptions(), fetchDoctor()])
+                      }
                     />
                   ))}
                 </div>
@@ -320,7 +323,6 @@ export default function DoctorDashboard() {
             prescriptionId={selectedPrescription._id}
             onSaved={() => {
               setSelectedPrescription(null);
-              Promise.all([fetchPrescriptions(), fetchDoctor()]);
             }}
             refresh={() => Promise.all([fetchPrescriptions(), fetchDoctor()])}
           />

@@ -8,7 +8,7 @@ import Image from "next/image";
 
 const Footer = () => {
   return (
-    <footer className="bg-foreground text-background py-16">
+    <footer className=" py-16">
       <div className="container mx-auto px-4">
         {/* Main Footer */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12 mb-12">
@@ -17,7 +17,7 @@ const Footer = () => {
             <div className="flex items-center gap-2 w-30 h-15 relative">
               <Image src="/images/Logo-Light.png" alt="logo" fill />
             </div>
-            <p className="text-background/70 leading-relaxed">
+            <p className="leading-relaxed">
               Empowering health through technology. Making quality healthcare
               accessible to everyone, everywhere.
             </p>
@@ -68,10 +68,7 @@ const Footer = () => {
             <h3 id="footer-product" className="text-lg font-semibold mb-4">
               Product
             </h3>
-            <ul
-              aria-labelledby="footer-product"
-              className="space-y-3 text-background/70"
-            >
+            <ul aria-labelledby="footer-product" className="space-y-3 ">
               <li>
                 <a
                   href="#features"
@@ -114,7 +111,7 @@ const Footer = () => {
             </h3>
             <ul
               aria-labelledby="footer-company"
-              className="space-y-3 text-background/70"
+              className="space-y-3 "
             >
               <li>
                 <a
@@ -154,23 +151,19 @@ const Footer = () => {
           {/* Newsletter */}
           <div>
             <h3 className="text-lg font-semibold mb-4">Newsletter</h3>
-            <p className="text-background/70 text-sm mb-3">
+            <p className="text-sm mb-3">
               Stay updated with health tips and app updates
             </p>
             <form
               className="flex flex-col lg:flex-row gap-3"
               onSubmit={(e) => e.preventDefault()}
             >
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 bg-background/10 border-background/20 text-background placeholder:text-background/50"
-              />
+              <Input type="email" placeholder="Enter your email" />
               <Button type="submit" className="bg-primary hover:bg-primary/90">
                 Subscribe
               </Button>
             </form>
-            <div className="mt-4 space-y-2 text-background/70 text-sm">
+            <div className="mt-4 space-y-2 text-sm">
               <a
                 href="#help"
                 className="block hover:text-primary focus-visible:ring"
@@ -195,10 +188,10 @@ const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="border-t border-background/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-background/70 text-sm">
+          <p className=" text-sm">
             © 2025 Medify. Empowering healthier lives, one click at a time.
           </p>
-          <div className="flex gap-4 text-sm text-background/70">
+          <div className="flex gap-4 text-sm ">
             <span className="flex items-center gap-1">
               <div className="w-2 h-2 bg-health-green rounded-full"></div> HIPAA
               Compliant

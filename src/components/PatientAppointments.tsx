@@ -5,13 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, FileText, Stethoscope, Eye, EyeOff, X } from "lucide-react";
+import {
+  Calendar,
+  FileText,
+  Stethoscope,
+  Eye,
+  EyeOff,
+  X,
+  Loader2,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { format } from "date-fns";
 
 interface PatientAppointmentsProps {
   appointments: Appointment[];
   loading: boolean;
+  cancelling: boolean;
   onCancelAppointment: (id: string) => void;
   refresh: () => void;
 }
@@ -20,6 +29,7 @@ export default function PatientAppointments({
   appointments,
   loading,
   onCancelAppointment,
+  cancelling,
 }: PatientAppointmentsProps) {
   const [expanded, setExpanded] = useState<{ [key: string]: boolean }>({});
 
@@ -155,7 +165,9 @@ export default function PatientAppointments({
                     <FileText className="h-4 w-4" />
                     Symptoms:
                   </span>
-                  <p className="mt-1 pl-6">{appt.symptoms}</p>
+                  <p className="mt-1 pl-6">
+                    {<ReactMarkdown>{appt.symptoms}</ReactMarkdown>}
+                  </p>
                 </div>
 
                 {/* Bot Response */}
@@ -202,9 +214,16 @@ export default function PatientAppointments({
                     variant="destructive"
                     onClick={() => onCancelAppointment(appt._id)}
                     className="flex items-center gap-2 w-full"
+                    disabled={cancelling}
                   >
-                    <X className="h-4 w-4" />
-                    Cancel Appointment
+                    {cancelling ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <X className="h-4 w-4" />
+                        Cancel Appointment
+                      </>
+                    )}
                   </Button>
                 )}
               </CardContent>

@@ -55,7 +55,6 @@ const HeroSection = () => {
             <Button
               variant="outline"
               size="lg" 
-              className="shadow-lg border-white/50 text-primary hover:bg-white/10"
               onClick={() => router.push("/auth/login")}
             >
               Log In

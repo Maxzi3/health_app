@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import toast from "react-hot-toast";
 
 export default function PrescriptionModal({
   prescriptionId,
@@ -28,9 +29,13 @@ export default function PrescriptionModal({
       await fetch(`/api/prescription/${prescriptionId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prescriptionNotes: notes }),
+        body: JSON.stringify({
+          status: "ACTIVE",
+          prescriptionNotes: notes,
+        }),
       });
       onSaved();
+      toast.success("Prescription Sent successfully");
       refresh();
     } catch (err) {
       console.error("Error saving prescription:", err);

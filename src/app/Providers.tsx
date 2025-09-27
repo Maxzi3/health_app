@@ -21,10 +21,14 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
       <SessionProvider
-        refetchInterval={0} // ⛔ disable polling completely
-        refetchOnWindowFocus={false} // ⛔ no refetch when tab gains focus
+        refetchInterval={0} // disable polling completely
+        refetchOnWindowFocus={false} //  no refetch when tab gains focus
       >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+        >
           <AuthLoaderWrapper>{children}</AuthLoaderWrapper>
         </ThemeProvider>
       </SessionProvider>

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { illnessToSpecialty } from "@/lib/specialtyMap";
+import { extractSymptoms, illnessToSpecialty } from "@/lib/specialtyMap";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
-import Conversation from "@/models/Conversation.model"; // needed for daily tracking
+import Conversation from "@/models/Conversation.model"; 
 import { isSameDay } from "date-fns";
 import { checkGuestLimit } from "@/lib/guestLimit";
 
@@ -11,7 +11,6 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 // ⚡ Daily message cap
 const MESSAGE_LIMIT = 3;
-
 
 // ---------------- Doctor Matching ----------------
 async function matchDoctors(symptoms: string[]) {
@@ -54,42 +53,6 @@ async function matchDoctors(symptoms: string[]) {
     .slice(0, 3);
 }
 
-// ---------------- Symptom Extractor ----------------
-function extractSymptoms(message: string): string[] {
-  const symptoms: string[] = [];
-  const lower = message.toLowerCase();
-  const keywords = [
-    "headache",
-    "dizziness",
-    "fever",
-    "cough",
-    "pain",
-    "nausea",
-    "fatigue",
-    "weakness",
-    "rash",
-    "anxiety",
-    "depression",
-    "stress",
-    "breathing",
-    "chest",
-    "stomach",
-    "diarrhea",
-    "vomiting",
-    "dizzy",
-    "migraine",
-    "vertigo",
-    "palpitations",
-    "insomnia",
-    "swelling",
-    "purging",
-  ];
-  keywords.forEach((kw) => {
-    if (lower.includes(kw)) symptoms.push(kw);
-  });
-  return symptoms;
-}
-
 // ---------------- Main POST Handler ----------------
 export async function POST(req: Request) {
   try {
@@ -99,6 +62,21 @@ export async function POST(req: Request) {
     const ip = (req.headers.get("x-forwarded-for") || "unknown")
       .split(",")[0]
       .trim();
+
+    // ✨ NEW: Unified health-related check for ALL users (guests and authenticated)
+    // This check runs before any other logic.
+    const initialSymptoms = extractSymptoms(message);
+    if (initialSymptoms.length === 0) {
+      return NextResponse.json(
+        {
+          text: "⚠️ Please enter a health-related concern (e.g., symptoms, conditions, or medical questions).",
+          doctors: [],
+          symptoms: [],
+          expectedDoctors: false,
+        },
+        { status: 200 }
+      );
+    }
 
     // 🌐 Guest Mode: no DB, just answer
     if (!isAuthenticated) {
@@ -112,6 +90,10 @@ export async function POST(req: Request) {
           { status: 200 }
         );
       }
+
+      // 🗑️ REMOVED: The specific check for guests is no longer needed here
+      // as it's handled by the unified check above.
+
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const prompt = `
@@ -127,14 +109,13 @@ Then, respond with the following sections using bullet points and short sentence
 - **Specialist Needed**: Clearly state the type of doctor to consult.
 
 Then, at the very end, output a JSON object: {"symptoms": ["symptom1", "symptom2"]}
-Finally, include the disclaimer: > ⚠️ **Disclaimer:** This is for informational purposes only.
+Finally, include the disclaimer: > ⚠️ **Disclaimer:** This is for informational purposes only, for Follow please Book an Appointment.
 `;
 
       const result = await model.generateContent(prompt);
       let responseText = result.response.text();
+      let extractedSymptoms: string[] = []; // Initialize here
 
-      // Extract symptoms like before
-      let extractedSymptoms: string[] = [];
       const jsonMatch = responseText.match(
         /\{[\s\S]*"symptoms":\s*\[[\s\S]*\][\s\S]*\}/
       );
@@ -149,8 +130,9 @@ Finally, include the disclaimer: > ⚠️ **Disclaimer:** This is for informatio
         }
       }
 
+      // Use initial symptoms as a fallback if the AI fails to generate them
       if (extractedSymptoms.length === 0) {
-        extractedSymptoms = extractSymptoms(message);
+        extractedSymptoms = initialSymptoms;
       }
 
       return NextResponse.json({
@@ -189,8 +171,6 @@ Finally, include the disclaimer: > ⚠️ **Disclaimer:** This is for informatio
     ) {
       conversation.dailyMessageCount = 0;
     }
-
-
 
     // 3. Enforce limit
     if (conversation.dailyMessageCount >= MESSAGE_LIMIT) {
@@ -245,8 +225,9 @@ Finally, include the disclaimer: > ⚠️ **Disclaimer:** This is for informatio
       }
     }
 
+    // Use initial symptoms as a fallback if AI fails to find any
     if (extractedSymptoms.length === 0) {
-      extractedSymptoms = extractSymptoms(message);
+      extractedSymptoms = initialSymptoms;
     }
 
     // 6. Doctor recommendations

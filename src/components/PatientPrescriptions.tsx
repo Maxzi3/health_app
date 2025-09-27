@@ -12,20 +12,23 @@ import {
   Eye,
   EyeOff,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface PatientPrescriptionsProps {
   prescriptions: Prescription[];
   loading: boolean;
+  markcompleteloading: boolean;
   onMarkCompleted: (id: string) => void;
-  refresh: () => void;
+  refresh: () => void;  
 }
 
 export default function PatientPrescriptions({
   prescriptions,
   loading,
   onMarkCompleted,
+  markcompleteloading,
 }: PatientPrescriptionsProps) {
   const [expanded, setExpanded] = useState<{ [key: string]: boolean }>({});
 
@@ -183,10 +186,17 @@ export default function PatientPrescriptions({
                 {pres.status === "ACTIVE" && (
                   <Button
                     onClick={() => onMarkCompleted(pres._id)}
+                    disabled={markcompleteloading}
                     className="flex items-center gap-2 bg-green-600 hover:bg-green-700 w-full"
                   >
-                    <CheckCircle className="h-4 w-4" />
-                    Mark as Completed
+                    {markcompleteloading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                      <CheckCircle className="h-4 w-4" />
+                      Mark Completed
+                      </>
+                    )}
                   </Button>
                 )}
               </CardContent>

@@ -8,7 +8,7 @@ import { authOptions } from "@/lib/authOptions";
 
 export async function PATCH(req: Request, context: any) {
   try {
-     const { id } = (context as { params: { id: string } }).params;
+    const { id } = (context as { params: { id: string } }).params;
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
@@ -17,7 +17,7 @@ export async function PATCH(req: Request, context: any) {
 
     await connectDB();
 
-    // Get user and prescription to verify permissions
+    // Get user and prescription
     const user = await User.findOne({ email: session.user.email });
     const prescription = await Prescription.findById(id);
 
@@ -32,28 +32,32 @@ export async function PATCH(req: Request, context: any) {
       );
     }
 
-    //  Check if the user is a doctor OR the patient who owns the prescription
     const isDoctor = user.role === "DOCTOR";
     const isOwner = prescription.patientId.toString() === user._id.toString();
 
-    // Allow the update only if it's a doctor or the patient who owns the prescription
-    //    and the status is "COMPLETED"
-    let updatedPrescription;
-    let body: { status?: string } = {};
+    let body: { status?: string; prescriptionNotes?: string } = {};
     try {
       body = await req.json();
     } catch {
-      // Gracefully handle empty body
+      // handle empty body gracefully
     }
 
-    // Only update status to "COMPLETED" for patients, or any status for doctors
+    let updatedPrescription;
+
     if (isDoctor) {
+      // Doctor can set any status + update notes
       updatedPrescription = await Prescription.findByIdAndUpdate(
         id,
-        { status: "ACTIVE" }, 
+        {
+          ...(body.status && { status: body.status }),
+          ...(body.prescriptionNotes && {
+            prescriptionNotes: body.prescriptionNotes,
+          }),
+        },
         { new: true }
       );
     } else if (isOwner && body.status === "COMPLETED") {
+      // Patient can only mark as completed
       updatedPrescription = await Prescription.findByIdAndUpdate(
         id,
         { status: "COMPLETED" },

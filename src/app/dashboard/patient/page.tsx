@@ -47,13 +47,15 @@ export default function PatientDashboard() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [markcompleteloading, setMarkcompleteloading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [statusFilterAppointments, setStatusFilterAppointments] = useState<
     "ALL" | Appointment["status"]
-  >("PENDING");
+  >("CONFIRMED");
   const [statusFilterPrescriptions, setStatusFilterPrescriptions] = useState<
     "ALL" | Prescription["status"]
-  >("PENDING");
+  >("ACTIVE");
 
   const router = useRouter();
 
@@ -111,6 +113,7 @@ export default function PatientDashboard() {
   // ✅ Mark prescription completed
   const markPrescriptionCompleted = async (id: string) => {
     try {
+      setMarkcompleteloading(true);
       const res = await fetch(`/api/prescription/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -122,12 +125,15 @@ export default function PatientDashboard() {
       fetchPatient(); // refresh stats
     } catch {
       toast.error("Failed to update prescription");
+    } finally {
+      setMarkcompleteloading(false);
     }
   };
 
   // ✅ Cancel appointment
   const cancelAppointment = async (id: string) => {
     try {
+      setCancelling(true);
       const res = await fetch(`/api/appointment/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -139,6 +145,8 @@ export default function PatientDashboard() {
       fetchPatient(); // refresh stats
     } catch {
       toast.error("Failed to cancel appointment");
+    }finally{
+      setCancelling(false);
     }
   };
 
@@ -272,6 +280,7 @@ export default function PatientDashboard() {
                 loading={loading}
                 onCancelAppointment={cancelAppointment}
                 refresh={fetchAppointments}
+                cancelling={cancelling}
               />
             </div>
           </TabsContent>
@@ -305,6 +314,7 @@ export default function PatientDashboard() {
                 loading={loading}
                 onMarkCompleted={markPrescriptionCompleted}
                 refresh={fetchPrescriptions}
+                markcompleteloading={markcompleteloading}
               />
             </div>
           </TabsContent>

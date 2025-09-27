@@ -148,7 +148,9 @@ export default function AppointmentItem({
             <FileText className="h-4 w-4" />
             Symptoms:
           </span>
-          <p className="mt-1 pl-6">{a.symptoms}</p>
+          <p className="mt-1 pl-6">
+            <ReactMarkdown>{a.symptoms}</ReactMarkdown>
+          </p>
         </div>
         <div className="text-sm prose prose-sm max-w-none bg-muted rounded-md p-3">
           <ReactMarkdown>{displayText}</ReactMarkdown>
