@@ -164,13 +164,13 @@
 }
 
 .dark {
-  --background: #05070a;
+  --background: #0f172a;
   --foreground: #f3f7fa;
 
-  --card: #05070a;
+  --card: #0f172a;
   --card-foreground: #f3f7fa;
 
-  --popover: #05070a;
+  --popover: #0f172a;
   --popover-foreground: #f3f7fa;
 
   --primary: #f3f7fa;
@@ -179,7 +179,7 @@
   --secondary: #2b323d;
   --secondary-foreground: #f3f7fa;
 
-  --muted: #2b323d;
+  --muted: #475569;
   --muted-foreground: #94a3b8;
 
   --accent: #2b323d;

@@ -63,13 +63,37 @@ export async function POST(req: Request) {
       .split(",")[0]
       .trim();
 
-    // ✨ NEW: Unified health-related check for ALL users (guests and authenticated)
-    // This check runs before any other logic.
-    const initialSymptoms = extractSymptoms(message);
-    if (initialSymptoms.length === 0) {
+    // 1. LLM Classification: Check if the message is health-related
+    const classifierModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const classificationPrompt = `
+      Analyze the user's message: "${message}". Is this a question seeking medical advice, symptom analysis, or general health information? 
+      Or is it a non-medical/general conversational query (e.g., 'hello', 'how are you', 'write a poem')?
+      Respond ONLY with a single JSON object.
+
+      JSON Format: {"isMedical": true | false, "responseType": "medical" | "general"}.
+    `;
+
+    const classificationResult = await classifierModel.generateContent(classificationPrompt);
+    const classificationText = classificationResult.response.text().trim();
+
+    let isMedical = false;
+    try {
+        // Attempt to extract and parse the JSON response from the LLM
+        const jsonMatch = classificationText.match(/\{[\s\S]*\}/);
+        const parsedClassification = JSON.parse(jsonMatch?.[0] || '{"isMedical": false}');
+        isMedical = parsedClassification.isMedical === true;
+    } catch (e) {
+        console.error("Failed to parse LLM classification JSON. Assuming medical for safety.", e);
+        isMedical = true; // Fail-safe: assume medical if parsing fails
+    }
+
+
+    // 2. Handle Non-Medical Queries
+    if (!isMedical) {
       return NextResponse.json(
         {
-          text: "⚠️ Please enter a health-related concern (e.g., symptoms, conditions, or medical questions).",
+          text: "Hello! I am a specialized medical assistant AI. I can help you with symptoms, conditions, or general health questions, but I'm not trained for general conversation. How can I assist with your health concern?",
           doctors: [],
           symptoms: [],
           expectedDoctors: false,
@@ -77,6 +101,9 @@ export async function POST(req: Request) {
         { status: 200 }
       );
     }
+    
+    // 3. Extract symptoms for doctor matching/fallback (only if deemed medical)
+    const initialSymptoms = extractSymptoms(message);
 
     // 🌐 Guest Mode: no DB, just answer
     if (!isAuthenticated) {
@@ -90,9 +117,6 @@ export async function POST(req: Request) {
           { status: 200 }
         );
       }
-
-      // 🗑️ REMOVED: The specific check for guests is no longer needed here
-      // as it's handled by the unified check above.
 
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
@@ -153,7 +177,7 @@ Finally, include the disclaimer: > ⚠️ **Disclaimer:** This is for informatio
 
     await connectDB();
 
-    // 1. Get conversation
+    // 4. Get conversation and enforce limits (Authenticated user flow)
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
       return NextResponse.json(
@@ -162,7 +186,7 @@ Finally, include the disclaimer: > ⚠️ **Disclaimer:** This is for informatio
       );
     }
 
-    // 2. Reset daily counter if new day
+    // Reset daily counter if new day
     const now = new Date();
 
     if (
@@ -172,7 +196,7 @@ Finally, include the disclaimer: > ⚠️ **Disclaimer:** This is for informatio
       conversation.dailyMessageCount = 0;
     }
 
-    // 3. Enforce limit
+    // Enforce limit
     if (conversation.dailyMessageCount >= MESSAGE_LIMIT) {
       return NextResponse.json(
         {
@@ -187,7 +211,7 @@ Finally, include the disclaimer: > ⚠️ **Disclaimer:** This is for informatio
     conversation.lastMessageDate = now;
     await conversation.save();
 
-    // 4. Generate AI response
+    // 5. Generate AI response (Authenticated user flow)
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
@@ -209,7 +233,7 @@ Finally, include the disclaimer: > ⚠️ **Disclaimer:** This is for informatio
     const result = await model.generateContent(prompt);
     let responseText = result.response.text();
 
-    // 5. Extract JSON with symptoms
+    // 6. Extract JSON with symptoms
     let extractedSymptoms: string[] = [];
     const jsonMatch = responseText.match(
       /\{[\s\S]*"symptoms":\s*\[[\s\S]*\][\s\S]*\}/
@@ -230,7 +254,7 @@ Finally, include the disclaimer: > ⚠️ **Disclaimer:** This is for informatio
       extractedSymptoms = initialSymptoms;
     }
 
-    // 6. Doctor recommendations
+    // 7. Doctor recommendations
     const doctors = isAuthenticated
       ? await matchDoctors(extractedSymptoms)
       : [];

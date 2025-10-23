@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   authors: [{ name: "Medify Team" }],
   creator: "Medify",
   publisher: "Medify",
-  metadataBase: new URL("https://medify-devmaxzi.vercel.app/"), // replace with your live domain
+  metadataBase: new URL("https://medify-devmaxzi.vercel.app/"),  
   openGraph: {
     title: "Medify - Your AI Healthcare Assistant",
     description:
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     siteName: "Medify",
     images: [
       {
-        url: "/images/Medifyog.png", // replace with your image
+        url: "/images/Medifyog.png", 
         width: 1200,
         height: 630,
         alt: "Medify Healthcare Assistant",
