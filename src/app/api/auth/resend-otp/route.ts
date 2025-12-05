@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     });
 
     // Send OTP email
-    await sendOtpEmail(email, otp, user.name);
+    await sendOtpEmail(email, user.name, otp);
 
     return NextResponse.json(
       { message: "OTP sent successfully" },
