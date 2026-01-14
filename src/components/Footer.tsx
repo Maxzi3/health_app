@@ -109,10 +109,7 @@ const Footer = () => {
             <h3 id="footer-company" className="text-lg font-semibold mb-4">
               Company
             </h3>
-            <ul
-              aria-labelledby="footer-company"
-              className="space-y-3 "
-            >
+            <ul aria-labelledby="footer-company" className="space-y-3 ">
               <li>
                 <a
                   href="/about"
@@ -189,7 +186,8 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="border-t border-background/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className=" text-sm">
-            © 2025 Medify. Empowering healthier lives, one click at a time.
+            &copy; {new Date().getFullYear()} Medify. Empowering healthier
+            lives, one click at a time.
           </p>
           <div className="flex gap-4 text-sm ">
             <span className="flex items-center gap-1">
